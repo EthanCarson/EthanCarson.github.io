@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Pomodoro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.5s ease;
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .mode-active {
+            background-color: rgba(255, 255, 255, 0.2);
+            font-weight: 600;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Standard CSS for guaranteed visibility */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .time-input {
+            width: 100%;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 0.75rem;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.125rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .time-input:focus {
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+            border-color: #ffffff;
+        }
+
+        .time-input::placeholder {
+            color: #666666 !important;
+            font-weight: 400;
+        }
+    </style>
+</head>
+<body class="bg-[#ba4949] flex items-center justify-center min-h-screen p-4" id="body-bg">
+
+    <div class="max-w-md w-full glass rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+        <!-- Settings Toggle -->
+        <button onclick="toggleSettings()" class="absolute top-6 right-6 hover:rotate-90 transition-transform duration-300 z-10">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+
+        <!-- Mode Switcher -->
+        <div class="flex justify-center space-x-2 mb-8">
+            <button onclick="setMode('work')" id="work-btn" class="px-4 py-2 rounded-lg transition-all mode-active">Focus</button>
+            <button onclick="setMode('break')" id="break-btn" class="px-4 py-2 rounded-lg transition-all">Short Break</button>
+        </div>
+
+        <!-- Timer Display -->
+        <div class="relative flex items-center justify-center mb-8">
+            <svg class="w-64 h-64">
+                <circle
+                    class="text-white/10"
+                    stroke-width="8"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r="120"
+                    cx="128"
+                    cy="128"
+                />
+                <circle
+                    id="progress-circle"
+                    class="progress-ring__circle text-white"
+                    stroke-width="8"
+                    stroke-dasharray="753.98"
+                    stroke-dashoffset="0"
+                    stroke-linecap="round"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r="120"
+                    cx="128"
+                    cy="128"
+                />
+            </svg>
+            <div class="absolute text-center">
+                <span id="timer-display" class="text-6xl font-extrabold tracking-tighter">00:25:00</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-col items-center space-y-6">
+            <button 
+                id="main-btn" 
+                onclick="toggleTimer()"
+                class="bg-white text-[#ba4949] px-12 py-4 rounded-2xl font-bold text-xl uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all w-full"
+            >
+                Start
+            </button>
+            
+            <button 
+                onclick="resetTimer()"
+                class="text-white/70 hover:text-white transition-colors text-sm uppercase tracking-widest font-semibold"
+            >
+                Reset
+            </button>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="absolute inset-0 bg-black/95 backdrop-blur-2xl flex flex-col p-8 translate-y-full transition-transform duration-500 z-40 overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold uppercase tracking-widest text-white">Timer Settings</h3>
+                <button onclick="toggleSettings()" class="text-white/50 hover:text-white p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <div class="space-y-8">
+                <!-- Focus Section -->
+                <div>
+                    <label class="block text-xs font-bold text-white/40 mb-3 uppercase tracking-widest">Focus Duration (H:M:S)</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <input type="number" id="work-h" placeholder="HH" min="0" max="99" value="0" class="time-input">
+                        <input type="number" id="work-m" placeholder="MM" min="0" max="59" value="25" class="time-input">
+                        <input type="number" id="work-s" placeholder="SS" min="0" max="59" value="0" class="time-input">
+                    </div>
+                </div>
+
+                <!-- Break Section -->
+                <div>
+                    <label class="block text-xs font-bold text-white/40 mb-3 uppercase tracking-widest">Break Duration (H:M:S)</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <input type="number" id="break-h" placeholder="HH" min="0" max="99" value="0" class="time-input">
+                        <input type="number" id="break-m" placeholder="MM" min="0" max="59" value="5" class="time-input">
+                        <input type="number" id="break-s" placeholder="SS" min="0" max="59" value="0" class="time-input">
+                    </div>
+                </div>
+
+                <button onclick="saveSettings()" class="w-full bg-white text-black py-4 rounded-xl font-bold uppercase tracking-widest mt-4 hover:bg-gray-200 transition-colors shadow-xl">
+                    Apply Changes
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom Notification -->
+        <div id="notification" class="absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-center p-6 translate-y-full transition-transform duration-500 z-50">
+            <h3 class="text-3xl font-black mb-2" id="notif-title">Session Complete!</h3>
+            <p class="text-white/80 mb-8" id="notif-body">Great job focusing.</p>
+            <button onclick="closeNotification()" class="bg-white text-black px-10 py-3 rounded-full font-bold uppercase tracking-wider text-sm">Dismiss</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        let MODES = {
+            work: {
+                seconds: 25 * 60,
+                color: '#ba4949',
+                title: 'Time to Focus!',
+                notif: 'Session Complete! Time for a break.'
+            },
+            break: {
+                seconds: 5 * 60,
+                color: '#38858a',
+                title: 'Break Time',
+                notif: 'Break is over! Ready to focus?'
+            }
+        };
+
+        // State
+        let currentMode = 'work';
+        let timeLeft = MODES.work.seconds;
+        let timerId = null;
+        let isRunning = false;
+        
+        // Audio Context for the chime
+        let audioCtx = null;
+
+        // Elements
+        const display = document.getElementById('timer-display');
+        const mainBtn = document.getElementById('main-btn');
+        const bodyBg = document.getElementById('body-bg');
+        const progressCircle = document.getElementById('progress-circle');
+        const workBtn = document.getElementById('work-btn');
+        const breakBtn = document.getElementById('break-btn');
+        const notification = document.getElementById('notification');
+        const notifTitle = document.getElementById('notif-title');
+        const notifBody = document.getElementById('notif-body');
+        const settingsPanel = document.getElementById('settings-panel');
+        
+        const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 120;
+
+        function playChime() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            const playTone = (freq, startTime, duration) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, startTime);
+                
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            };
+
+            const now = audioCtx.currentTime;
+            // A simple high-low "Zen" double-tone
+            playTone(880, now, 0.5);
+            playTone(660, now + 0.15, 0.7);
+        }
+
+        function toggleSettings() {
+            settingsPanel.classList.toggle('translate-y-full');
+        }
+
+        function saveSettings() {
+            const getVal = (id) => parseInt(document.getElementById(id).value) || 0;
+            
+            const workSecs = (getVal('work-h') * 3600) + (getVal('work-m') * 60) + getVal('work-s');
+            const breakSecs = (getVal('break-h') * 3600) + (getVal('break-m') * 60) + getVal('break-s');
+            
+            // Ensure at least 1 second
+            MODES.work.seconds = Math.max(1, workSecs);
+            MODES.break.seconds = Math.max(1, breakSecs);
+            
+            if (!isRunning) {
+                timeLeft = MODES[currentMode].seconds;
+                updateDisplay();
+            }
+            
+            toggleSettings();
+        }
+
+        function setMode(mode) {
+            if (isRunning) toggleTimer();
+            currentMode = mode;
+            timeLeft = MODES[mode].seconds;
+            
+            // UI Updates
+            bodyBg.style.backgroundColor = MODES[mode].color;
+            mainBtn.style.color = MODES[mode].color;
+            
+            workBtn.classList.toggle('mode-active', mode === 'work');
+            breakBtn.classList.toggle('mode-active', mode === 'break');
+            
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const h = Math.floor(timeLeft / 3600);
+            const m = Math.floor((timeLeft % 3600) / 60);
+            const s = timeLeft % 60;
+            
+            const hStr = h > 0 ? `${h.toString().padStart(2, '0')}:` : '';
+            display.textContent = `${hStr}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            
+            // Progress ring calculation
+            const totalSeconds = MODES[currentMode].seconds;
+            const progress = timeLeft / totalSeconds;
+            const offset = CIRCLE_CIRCUMFERENCE - (progress * CIRCLE_CIRCUMFERENCE);
+            progressCircle.style.strokeDashoffset = offset;
+
+            // Update Page Title
+            document.title = `${display.textContent} - ${currentMode === 'work' ? 'Focus' : 'Break'}`;
+        }
+
+        function toggleTimer() {
+            // Initializing audio context on first user interaction to bypass browser policies
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            if (isRunning) {
+                clearInterval(timerId);
+                mainBtn.textContent = 'Start';
+                isRunning = false;
+            } else {
+                isRunning = true;
+                mainBtn.textContent = 'Pause';
+                timerId = setInterval(() => {
+                    timeLeft--;
+                    updateDisplay();
+
+                    if (timeLeft <= 0) {
+                        finishSession();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            if (isRunning) toggleTimer();
+            timeLeft = MODES[currentMode].seconds;
+            updateDisplay();
+        }
+
+        function finishSession() {
+            clearInterval(timerId);
+            isRunning = false;
+            mainBtn.textContent = 'Start';
+            
+            // Play alarm chime
+            playChime();
+            
+            // Show custom notification
+            notifTitle.textContent = currentMode === 'work' ? 'Well Done!' : 'Ready?';
+            notifBody.textContent = MODES[currentMode].notif;
+            notification.classList.remove('translate-y-full');
+            
+            // Auto switch mode for next session
+            const nextMode = currentMode === 'work' ? 'break' : 'work';
+            setMode(nextMode);
+        }
+
+        function closeNotification() {
+            notification.classList.add('translate-y-full');
+            // Automatically start the next timer session upon dismissal
+            toggleTimer();
+        }
+
+        // Initialize
+        updateDisplay();
+    </script>
+</body>
+</html>
