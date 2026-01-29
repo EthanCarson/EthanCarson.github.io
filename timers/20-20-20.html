@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus & Vision - 20-20-20 Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .timer-circle {
+            transition: stroke-dashoffset 1s linear;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .alarm-pulse {
+            animation: alarm-glow 1s infinite alternate;
+        }
+
+        @keyframes alarm-glow {
+            from { filter: drop-shadow(0 0 5px #ef4444); }
+            to { filter: drop-shadow(0 0 20px #ef4444); }
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="main-card" class="max-w-md w-full bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl transition-all duration-500">
+        
+        <!-- Header & Settings -->
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h1 class="text-xl font-bold text-blue-400">Focus & Vision</h1>
+                <p class="text-slate-500 text-xs uppercase tracking-wider font-semibold">20-20-20 Rule</p>
+            </div>
+            <div class="text-right">
+                <label class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Total Goal (Mins)</label>
+                <input type="number" id="goal-input" value="60" class="w-16 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-center mono text-blue-300 focus:outline-none focus:border-blue-500 transition-colors">
+            </div>
+        </div>
+
+        <!-- Overall Progress Bar -->
+        <div class="mb-8">
+            <div class="flex justify-between text-[10px] uppercase font-bold text-slate-500 mb-1">
+                <span>Session Progress</span>
+                <span id="overall-percent">0%</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div id="overall-bar" class="h-full bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Main Timer Visualization -->
+        <div class="relative flex justify-center items-center mb-10">
+            <svg id="svg-container" class="w-64 h-64">
+                <circle cx="128" cy="128" r="120" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-800" />
+                <circle
+                    id="progress-circle"
+                    cx="128"
+                    cy="128"
+                    r="120"
+                    stroke="currentColor"
+                    stroke-width="8"
+                    fill="transparent"
+                    stroke-dasharray="753.98"
+                    stroke-dashoffset="0"
+                    stroke-linecap="round"
+                    class="timer-circle text-blue-500"
+                />
+            </svg>
+            
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="state-label" class="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Focus Mode</span>
+                <span id="time-display" class="text-5xl font-bold mono tracking-tighter">20:00</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <button id="start-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-6 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                <span id="start-icon">▶</span> <span id="start-text">Start Work</span>
+            </button>
+            <button id="reset-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 px-6 rounded-xl transition-all active:scale-95">
+                Reset
+            </button>
+        </div>
+
+        <!-- Stats -->
+        <div class="border-t border-slate-800 pt-6 flex justify-between items-center text-sm">
+            <div>
+                <span class="text-slate-500">Breaks Taken:</span>
+                <span id="session-count" class="mono font-bold text-blue-400 ml-1">0</span>
+            </div>
+            <div id="total-time-container">
+                <span class="text-slate-500">Elapsed:</span>
+                <span id="total-elapsed" class="mono font-bold text-slate-300 ml-1">0m</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 transform translate-y-4 flex items-center gap-3">
+        <span id="toast-icon">👁️</span>
+        <span id="toast-msg">Time for a 20-second eye break!</span>
+    </div>
+
+    <!-- Sound Effects -->
+    <audio id="beep-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+
+    <script>
+        // Constants
+         const WORK_TIME = 20 * 60; 
+        // const WORK_TIME = 20; //For pratice
+        const BREAK_TIME = 20;    
+        const CIRCLE_CIRCUMFERENCE = 753.98;
+
+        // State variables
+        let timeLeft = WORK_TIME;
+        let totalElapsedSeconds = 0;
+        let isRunning = false;
+        let isAlarming = false;
+        let isSessionComplete = false;
+        let currentMode = 'work';
+        let timerId = null;
+        let completedSessions = 0;
+
+        // Elements
+        const goalInput = document.getElementById('goal-input');
+        const overallBar = document.getElementById('overall-bar');
+        const overallPercent = document.getElementById('overall-percent');
+        const totalElapsedDisplay = document.getElementById('total-elapsed');
+        const svgContainer = document.getElementById('svg-container');
+        const timeDisplay = document.getElementById('time-display');
+        const stateLabel = document.getElementById('state-label');
+        const progressCircle = document.getElementById('progress-circle');
+        const startBtn = document.getElementById('start-btn');
+        const startText = document.getElementById('start-text');
+        const startIcon = document.getElementById('start-icon');
+        const resetBtn = document.getElementById('reset-btn');
+        const sessionCountDisplay = document.getElementById('session-count');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-msg');
+        const beepSound = document.getElementById('beep-sound');
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateProgress() {
+            const total = currentMode === 'work' ? WORK_TIME : BREAK_TIME;
+            const percentage = timeLeft / total;
+            const offset = CIRCLE_CIRCUMFERENCE * (1 - percentage);
+            progressCircle.style.strokeDashoffset = offset;
+            
+            // Overall Session Progress
+            const goalMinutes = parseInt(goalInput.value) || 60;
+            const goalSeconds = goalMinutes * 60;
+            const overallProgress = Math.min((totalElapsedSeconds / goalSeconds) * 100, 100);
+            overallBar.style.width = `${overallProgress}%`;
+            overallPercent.innerText = `${Math.round(overallProgress)}%`;
+            totalElapsedDisplay.innerText = `${Math.floor(totalElapsedSeconds / 60)}m`;
+
+            if (isAlarming) {
+                progressCircle.style.stroke = "#ef4444";
+            } else if (currentMode === 'break') {
+                progressCircle.style.stroke = "#22c55e";
+            } else {
+                progressCircle.style.stroke = "#3b82f6";
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            toastMsg.innerText = message;
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            
+            toast.classList.remove('bg-blue-600', 'bg-green-600', 'bg-red-600', 'bg-purple-600');
+            if (type === 'break') toast.classList.add('bg-green-600');
+            else if (type === 'alert') toast.classList.add('bg-red-600');
+            else if (type === 'complete') toast.classList.add('bg-purple-600');
+            else toast.classList.add('bg-blue-600');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 5000);
+        }
+
+        function startAlarm() {
+            isAlarming = true;
+            isRunning = false;
+            clearInterval(timerId);
+            
+            beepSound.loop = true;
+            beepSound.play().catch(e => console.log("Audio play blocked"));
+            
+            svgContainer.classList.add('alarm-pulse');
+            stateLabel.innerText = "WORK COMPLETE";
+            stateLabel.classList.add('text-red-500');
+            
+            startBtn.classList.replace('bg-blue-600', 'bg-red-600');
+            startBtn.classList.add('ring-4', 'ring-red-500/50');
+            startText.innerText = "START BREAK";
+            startIcon.innerText = "👀";
+            
+            showToast("Work interval complete! Click to start your eye break.", 'alert');
+        }
+
+        function stopAlarm() {
+            isAlarming = false;
+            beepSound.loop = false;
+            beepSound.pause();
+            beepSound.currentTime = 0;
+            
+            svgContainer.classList.remove('alarm-pulse');
+            startBtn.classList.replace('bg-red-600', 'bg-green-600');
+            startBtn.classList.remove('ring-4', 'ring-red-500/50');
+        }
+
+        function startBreak() {
+            stopAlarm();
+            currentMode = 'break';
+            timeLeft = BREAK_TIME;
+            stateLabel.innerText = "Eye Break Active";
+            stateLabel.classList.replace('text-red-500', 'text-green-400');
+            
+            startText.innerText = "Break...";
+            startIcon.innerText = "⏳";
+            
+            completedSessions++;
+            sessionCountDisplay.innerText = completedSessions;
+            
+            isRunning = true;
+            timerId = setInterval(tick, 1000);
+            updateDisplay();
+        }
+
+        function finishBreak() {
+            clearInterval(timerId);
+            isRunning = false;
+            
+            // Check if Total Goal is met
+            const goalMinutes = parseInt(goalInput.value) || 60;
+            if (totalElapsedSeconds >= goalMinutes * 60) {
+                completeSession();
+                return;
+            }
+
+            currentMode = 'work';
+            timeLeft = WORK_TIME;
+            
+            stateLabel.innerText = "Focus Mode";
+            stateLabel.classList.remove('text-green-400');
+            stateLabel.classList.add('text-slate-500');
+            
+            startBtn.classList.replace('bg-green-600', 'bg-blue-600');
+            startText.innerText = "Pause";
+            startIcon.innerText = "⏸";
+            
+            isRunning = true;
+            timerId = setInterval(tick, 1000);
+            showToast("Break complete. New focus session started!", 'info');
+            
+            const alertSound = new Audio(beepSound.src);
+            alertSound.play();
+            updateDisplay();
+        }
+
+        function completeSession() {
+            isSessionComplete = true;
+            isRunning = false;
+            clearInterval(timerId);
+            
+            stateLabel.innerText = "SESSION COMPLETE";
+            stateLabel.classList.add('text-purple-400');
+            timeLeft = 0;
+            
+            startBtn.className = "bg-purple-600 text-white font-semibold py-3 px-6 rounded-xl w-full col-span-2 cursor-default";
+            startText.innerText = "GOAL REACHED!";
+            startIcon.innerText = "🏆";
+            
+            showToast("Congratulations! You've finished your set work duration.", 'complete');
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            timeDisplay.innerText = formatTime(timeLeft);
+            updateProgress();
+        }
+
+        function tick() {
+            if (timeLeft > 0) {
+                timeLeft--;
+                // Only increment total elapsed during work or break active time (not alarm)
+                totalElapsedSeconds++;
+                updateDisplay();
+            } else {
+                if (currentMode === 'work') {
+                    startAlarm();
+                } else {
+                    finishBreak();
+                }
+            }
+        }
+
+        function toggleTimer() {
+            if (isSessionComplete) return;
+
+            if (isAlarming) {
+                startBreak();
+                return;
+            }
+
+            if (isRunning) {
+                clearInterval(timerId);
+                startText.innerText = "Resume";
+                startIcon.innerText = "▶";
+                isRunning = false;
+            } else {
+                timerId = setInterval(tick, 1000);
+                startText.innerText = "Pause";
+                startIcon.innerText = "⏸";
+                isRunning = true;
+                if (currentMode === 'break') startBtn.classList.add('bg-green-600');
+            }
+        }
+
+        function resetTimer() {
+            stopAlarm();
+            clearInterval(timerId);
+            isRunning = false;
+            isSessionComplete = false;
+            currentMode = 'work';
+            timeLeft = WORK_TIME;
+            totalElapsedSeconds = 0;
+            completedSessions = 0;
+            sessionCountDisplay.innerText = "0";
+            
+            stateLabel.innerText = "Focus Mode";
+            stateLabel.classList.remove('text-green-400', 'text-red-500', 'text-purple-400');
+            stateLabel.classList.add('text-slate-500');
+            
+            startBtn.className = "bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-6 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2";
+            startText.innerText = "Start Work";
+            startIcon.innerText = "▶";
+            
+            updateDisplay();
+        }
+
+        startBtn.addEventListener('click', toggleTimer);
+        resetBtn.addEventListener('click', resetTimer);
+        goalInput.addEventListener('change', updateDisplay);
+
+        updateDisplay();
+    </script>
+</body>
+</html>
