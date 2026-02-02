@@ -126,8 +126,7 @@
 
     <script>
         // Constants
-         const WORK_TIME = 20 * 60; 
-        // const WORK_TIME = 20; //For pratice
+        const WORK_TIME = 20 * 60; 
         const BREAK_TIME = 20;    
         const CIRCLE_CIRCUMFERENCE = 753.98;
 
@@ -138,8 +137,25 @@
         let isAlarming = false;
         let isSessionComplete = false;
         let currentMode = 'work';
-        let timerId = null;
         let completedSessions = 0;
+
+        // Web Worker Setup (Inline)
+        const workerCode = `
+            let timerId = null;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    if (timerId) clearInterval(timerId);
+                    timerId = setInterval(() => {
+                        self.postMessage('tick');
+                    }, 1000);
+                } else if (e.data === 'stop') {
+                    clearInterval(timerId);
+                    timerId = null;
+                }
+            };
+        `;
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
 
         // Elements
         const goalInput = document.getElementById('goal-input');
@@ -171,7 +187,6 @@
             const offset = CIRCLE_CIRCUMFERENCE * (1 - percentage);
             progressCircle.style.strokeDashoffset = offset;
             
-            // Overall Session Progress
             const goalMinutes = parseInt(goalInput.value) || 60;
             const goalSeconds = goalMinutes * 60;
             const overallProgress = Math.min((totalElapsedSeconds / goalSeconds) * 100, 100);
@@ -208,10 +223,10 @@
         function startAlarm() {
             isAlarming = true;
             isRunning = false;
-            clearInterval(timerId);
+            worker.postMessage('stop');
             
             beepSound.loop = true;
-            beepSound.play().catch(e => console.log("Audio play blocked"));
+            beepSound.play().catch(e => console.log("Audio play blocked by browser. Interaction required."));
             
             svgContainer.classList.add('alarm-pulse');
             stateLabel.innerText = "WORK COMPLETE";
@@ -250,15 +265,14 @@
             sessionCountDisplay.innerText = completedSessions;
             
             isRunning = true;
-            timerId = setInterval(tick, 1000);
+            worker.postMessage('start');
             updateDisplay();
         }
 
         function finishBreak() {
-            clearInterval(timerId);
             isRunning = false;
+            worker.postMessage('stop');
             
-            // Check if Total Goal is met
             const goalMinutes = parseInt(goalInput.value) || 60;
             if (totalElapsedSeconds >= goalMinutes * 60) {
                 completeSession();
@@ -277,18 +291,18 @@
             startIcon.innerText = "⏸";
             
             isRunning = true;
-            timerId = setInterval(tick, 1000);
+            worker.postMessage('start');
             showToast("Break complete. New focus session started!", 'info');
             
             const alertSound = new Audio(beepSound.src);
-            alertSound.play();
+            alertSound.play().catch(() => {});
             updateDisplay();
         }
 
         function completeSession() {
             isSessionComplete = true;
             isRunning = false;
-            clearInterval(timerId);
+            worker.postMessage('stop');
             
             stateLabel.innerText = "SESSION COMPLETE";
             stateLabel.classList.add('text-purple-400');
@@ -310,7 +324,6 @@
         function tick() {
             if (timeLeft > 0) {
                 timeLeft--;
-                // Only increment total elapsed during work or break active time (not alarm)
                 totalElapsedSeconds++;
                 updateDisplay();
             } else {
@@ -322,6 +335,13 @@
             }
         }
 
+        // Listen for messages from the Web Worker
+        worker.onmessage = function(e) {
+            if (e.data === 'tick' && isRunning) {
+                tick();
+            }
+        };
+
         function toggleTimer() {
             if (isSessionComplete) return;
 
@@ -331,12 +351,12 @@
             }
 
             if (isRunning) {
-                clearInterval(timerId);
+                worker.postMessage('stop');
                 startText.innerText = "Resume";
                 startIcon.innerText = "▶";
                 isRunning = false;
             } else {
-                timerId = setInterval(tick, 1000);
+                worker.postMessage('start');
                 startText.innerText = "Pause";
                 startIcon.innerText = "⏸";
                 isRunning = true;
@@ -346,7 +366,7 @@
 
         function resetTimer() {
             stopAlarm();
-            clearInterval(timerId);
+            worker.postMessage('stop');
             isRunning = false;
             isSessionComplete = false;
             currentMode = 'work';
