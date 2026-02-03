@@ -49,6 +49,39 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* Masonry/Grid specific overrides */
+        .grid-mode #slider-track {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            transform: none !important;
+            padding: 2rem;
+            height: auto;
+        }
+
+        .grid-mode .card-wrapper {
+            width: 100% !important;
+            height: auto !important;
+            padding: 0 !important;
+        }
+
+        .grid-mode .card-container {
+            max-height: none !important;
+            height: auto !important;
+            flex-direction: column !important;
+        }
+
+        .grid-mode .card-media {
+            width: 100% !important;
+            height: 200px !important;
+        }
+
+        .grid-mode .card-text {
+            width: 100% !important;
+            overflow-y: visible !important;
+            padding: 1.5rem !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans h-screen flex flex-col overflow-hidden">
@@ -61,11 +94,11 @@
         </div>
     </header>
 
-    <!-- Main Carousel Container -->
-    <main class="flex-grow relative flex items-center justify-center overflow-hidden">
+    <!-- Main Content Area -->
+    <main id="main-container" class="flex-grow relative flex items-center justify-center overflow-hidden">
         
-        <!-- Navigation Arrows (pointer-events: none allows clicks to pass through to the scrollbar) -->
-        <div class="absolute inset-y-0 left-0 flex items-center z-20 px-4 sm:px-8 pointer-events-none">
+        <!-- Navigation Arrows -->
+        <div id="nav-arrows" class="absolute inset-y-0 left-0 right-0 pointer-events-none z-20 flex justify-between items-center px-4 sm:px-8">
             <button 
                 id="prev-btn" 
                 aria-label="Previous Slide" 
@@ -73,9 +106,6 @@
             >
                 <i class="fas fa-chevron-left text-4xl"></i>
             </button>
-        </div>
-
-        <div class="absolute inset-y-0 right-0 flex items-center z-20 px-4 sm:px-8 pointer-events-none">
             <button 
                 id="next-btn" 
                 aria-label="Next Slide" 
@@ -95,16 +125,26 @@
 
     <!-- Bottom Controls -->
     <footer class="bg-white border-t border-gray-200 py-6 px-4">
-        <div class="max-w-md mx-auto flex flex-col items-center gap-6">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
             
+            <!-- Grid Layout Toggle -->
+            <div class="flex items-center gap-3 order-2 md:order-1">
+                <span id="layout-label" class="text-sm font-medium text-gray-600">Grid View</span>
+                <label for="layout-toggle" class="flex items-center cursor-pointer relative">
+                    <input type="checkbox" id="layout-toggle" class="sr-only" aria-labelledby="layout-label">
+                    <div class="block bg-gray-200 w-12 h-7 rounded-full transition-colors border-2 border-transparent"></div>
+                    <div class="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full shadow-sm transition-transform"></div>
+                </label>
+            </div>
+
             <!-- Navigation Dots -->
-            <div id="dot-container" class="flex items-center space-x-3" aria-label="Carousel Pagination">
+            <div id="dot-container" class="flex items-center space-x-3 order-1 md:order-2" aria-label="Carousel Pagination">
                 <!-- Dots injected here -->
             </div>
 
             <!-- Auto-Advance Toggle -->
-            <div class="flex items-center gap-3">
-                <span id="toggle-label" class="text-sm font-medium text-gray-600">Auto-advance cards</span>
+            <div id="auto-advance-controls" class="flex items-center gap-3 order-3">
+                <span id="toggle-label" class="text-sm font-medium text-gray-600">Auto-advance</span>
                 <label for="auto-toggle" class="flex items-center cursor-pointer relative">
                     <input type="checkbox" id="auto-toggle" class="sr-only" aria-labelledby="toggle-label">
                     <div class="block bg-gray-200 w-12 h-7 rounded-full transition-colors border-2 border-transparent"></div>
@@ -115,10 +155,6 @@
     </footer>
 
     <script>
-        /**
-         * UPDATED CARD DATA:
-         * You can now specify an 'image' or a 'videoUrl'.
-         */
         const CARD_DATA = [
             {
                 title: "Alpine Peaks",
@@ -131,7 +167,7 @@
                 title: "Nature in Motion",
                 photographer: "Motion Studios",
                 body: "Experience the dynamic rhythms of the natural world. From flowing rivers to rustling leaves, this card features a cinematic look at the environment through video.",
-                videoUrl: "https://www.youtube.com/embed/ScMzIvxBSi4", // Sample 4K Nature Video
+                videoUrl: "https://www.youtube.com/embed/ScMzIvxBSi4", 
                 alt: "Cinematic nature video placeholder"
             },
             {
@@ -159,13 +195,19 @@
 
         let currentIndex = 0;
         let autoAdvanceInterval = null;
+        let isGridMode = false;
         const AUTO_ADVANCE_DELAY = 5000;
 
+        const mainContainer = document.getElementById('main-container');
+        const sliderContainer = document.getElementById('slider-container');
         const sliderTrack = document.getElementById('slider-track');
         const dotContainer = document.getElementById('dot-container');
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
         const autoToggle = document.getElementById('auto-toggle');
+        const layoutToggle = document.getElementById('layout-toggle');
+        const navArrows = document.getElementById('nav-arrows');
+        const autoControls = document.getElementById('auto-advance-controls');
 
         function init() {
             renderCards();
@@ -176,7 +218,6 @@
 
         function renderCards() {
             sliderTrack.innerHTML = CARD_DATA.map((card, index) => {
-                // Determine whether to render an image or a video iframe
                 const mediaHtml = card.videoUrl 
                     ? `<iframe 
                         class="w-full h-full" 
@@ -188,29 +229,29 @@
                     : `<img src="${card.image}" alt="${card.alt}" class="w-full h-full object-cover"/>`;
 
                 return `
-                <div class="w-full flex-shrink-0 h-full flex items-center justify-center p-4 md:p-8" 
+                <div class="card-wrapper w-full flex-shrink-0 h-full flex items-center justify-center p-4 md:p-8" 
                      role="group" 
                      aria-roledescription="slide" 
                      aria-label="Slide ${index + 1} of ${CARD_DATA.length}"
-                     ${index !== 0 ? 'aria-hidden="true"' : ''}>
-                    <div class="max-w-4xl w-full bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row h-full max-h-[75vh]">
+                     ${!isGridMode && index !== currentIndex ? 'aria-hidden="true"' : 'aria-hidden="false"'}>
+                    <div class="card-container max-w-4xl w-full bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row h-full max-h-[75vh]">
                         
-                        <!-- Media Container (Left Side) -->
-                        <div class="w-full md:w-1/2 h-56 md:h-auto relative flex-shrink-0 bg-black">
+                        <!-- Media Container -->
+                        <div class="card-media w-full md:w-1/2 h-56 md:h-auto relative flex-shrink-0 bg-black">
                             ${mediaHtml}
                         </div>
                         
-                        <!-- Text Content (Right Side) -->
-                        <div class="w-full md:w-1/2 p-8 md:p-12 md:pt-16 flex flex-col justify-start bg-white overflow-y-auto overflow-x-hidden custom-scrollbar relative">
+                        <!-- Text Content -->
+                        <div class="card-text w-full md:w-1/2 p-8 md:p-12 md:pt-16 flex flex-col justify-start bg-white overflow-y-auto overflow-x-hidden custom-scrollbar relative">
                             <span class="text-blue-600 font-bold uppercase tracking-widest text-[10px] mb-2 flex-shrink-0">Feature ${index + 1}</span>
-                            <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2 flex-shrink-0">${card.title}</h2>
+                            <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2 flex-shrink-0">${card.title}</h2>
                             
-                            <p class="text-sm text-gray-500 font-semibold mb-8 flex items-center gap-2 flex-shrink-0">
+                            <p class="text-sm text-gray-500 font-semibold mb-6 flex items-center gap-2 flex-shrink-0">
                                 <i class="fas fa-camera text-blue-500 text-xs"></i> 
                                 <span>Source: <span class="text-gray-800">${card.photographer}</span></span>
                             </p>
                             
-                            <p class="text-gray-600 text-lg leading-relaxed pb-8">${card.body}</p>
+                            <p class="text-gray-600 text-base leading-relaxed pb-4">${card.body}</p>
                         </div>
                     </div>
                 </div>
@@ -229,25 +270,52 @@
         }
 
         function updateUI() {
-            sliderTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
-            document.querySelectorAll('.nav-dot').forEach((dot, index) => {
-                if (index === currentIndex) {
-                    dot.classList.add('bg-blue-600', 'w-8');
-                    dot.classList.remove('bg-gray-300', 'w-3');
+            if (isGridMode) {
+                sliderContainer.classList.add('grid-mode', 'overflow-y-auto', 'custom-scrollbar');
+                sliderContainer.classList.remove('overflow-hidden');
+                navArrows.classList.add('hidden');
+                dotContainer.classList.add('invisible');
+                autoControls.classList.add('invisible');
+                
+                // Reset auto-advance if it was on
+                if (autoToggle.checked) {
+                    autoToggle.checked = false;
+                    toggleAutoAdvance();
+                }
+            } else {
+                sliderContainer.classList.remove('grid-mode', 'overflow-y-auto', 'custom-scrollbar');
+                sliderContainer.classList.add('overflow-hidden');
+                navArrows.classList.remove('hidden');
+                dotContainer.classList.remove('invisible');
+                autoControls.classList.remove('invisible');
+                
+                sliderTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
+                
+                document.querySelectorAll('.nav-dot').forEach((dot, index) => {
+                    if (index === currentIndex) {
+                        dot.classList.add('bg-blue-600', 'w-8');
+                        dot.classList.remove('bg-gray-300', 'w-3');
+                    } else {
+                        dot.classList.remove('bg-blue-600', 'w-8');
+                        dot.classList.add('bg-gray-300', 'w-3');
+                    }
+                });
+            }
+
+            const slides = document.querySelectorAll('.card-wrapper');
+            slides.forEach((slide, i) => {
+                if (isGridMode) {
+                    slide.setAttribute('aria-hidden', 'false');
                 } else {
-                    dot.classList.remove('bg-blue-600', 'w-8');
-                    dot.classList.add('bg-gray-300', 'w-3');
+                    slide.setAttribute('aria-hidden', i !== currentIndex);
+                    const contentArea = slide.querySelector('.overflow-y-auto');
+                    if (contentArea) contentArea.scrollTop = 0;
                 }
             });
-            const slides = sliderTrack.children;
-            for (let i = 0; i < slides.length; i++) {
-                slides[i].setAttribute('aria-hidden', i !== currentIndex);
-                const contentArea = slides[i].querySelector('.overflow-y-auto');
-                if (contentArea) contentArea.scrollTop = 0;
-            }
         }
 
         function goToSlide(index) {
+            if (isGridMode) return;
             currentIndex = index;
             if (currentIndex >= CARD_DATA.length) currentIndex = 0;
             if (currentIndex < 0) currentIndex = CARD_DATA.length - 1;
@@ -258,30 +326,48 @@
         function prevSlide() { goToSlide(currentIndex - 1); }
 
         function toggleAutoAdvance() {
-            if (autoToggle.checked) {
+            if (autoToggle.checked && !isGridMode) {
                 autoAdvanceInterval = setInterval(nextSlide, AUTO_ADVANCE_DELAY);
                 autoToggle.nextElementSibling.classList.replace('bg-gray-200', 'bg-blue-100');
             } else {
                 clearInterval(autoAdvanceInterval);
                 autoAdvanceInterval = null;
                 autoToggle.nextElementSibling.classList.replace('bg-blue-100', 'bg-gray-200');
+                autoToggle.checked = false;
             }
+        }
+
+        function toggleLayout() {
+            isGridMode = layoutToggle.checked;
+            if (isGridMode) {
+                layoutToggle.nextElementSibling.classList.replace('bg-gray-200', 'bg-blue-100');
+            } else {
+                layoutToggle.nextElementSibling.classList.replace('bg-blue-100', 'bg-gray-200');
+            }
+            updateUI();
         }
 
         function setupEventListeners() {
             prevBtn.addEventListener('click', prevSlide);
             nextBtn.addEventListener('click', nextSlide);
             autoToggle.addEventListener('change', toggleAutoAdvance);
+            layoutToggle.addEventListener('change', toggleLayout);
 
             document.addEventListener('keydown', (e) => {
+                if (isGridMode) return;
                 if (e.key === 'ArrowLeft') prevSlide();
                 if (e.key === 'ArrowRight') nextSlide();
             });
 
             let touchStartX = 0;
             let touchEndX = 0;
-            sliderTrack.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, { passive: true });
+            sliderTrack.addEventListener('touchstart', e => {
+                if (isGridMode) return;
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+            
             sliderTrack.addEventListener('touchend', e => {
+                if (isGridMode) return;
                 touchEndX = e.changedTouches[0].screenX;
                 if (touchEndX < touchStartX - 50) nextSlide();
                 if (touchEndX > touchStartX + 50) prevSlide();
@@ -290,5 +376,7 @@
 
         window.onload = init;
     </script>
+</body>
+</html>
 </body>
 </html>
