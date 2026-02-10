@@ -120,9 +120,27 @@
             background-color: #1e293b !important;
             color: #f1f5f9;
         }
+
+        /* Loading Overlay Styling */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: #f8fafc;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+        .dark #loading-overlay { background: #020617; }
     </style>
 </head>
 <body id="app-body" class="bg-gray-100 text-slate-900 font-sans h-screen flex flex-col overflow-hidden transition-colors duration-300">
+
+    <!-- Loading Screen -->
+    <div id="loading-overlay">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+    </div>
 
     <!-- Header / Title Area -->
     <header class="py-6 px-4 bg-white shadow-sm z-10 border-b border-gray-200 transition-colors duration-300">
@@ -199,24 +217,53 @@
                 <span id="toggle-label" class="text-sm font-bold text-slate-700 dark:text-slate-300">Auto-advance</span>
                 <label for="auto-toggle" class="flex items-center cursor-pointer relative">
                     <input type="checkbox" id="auto-toggle" class="sr-only" aria-labelledby="toggle-label">
-                    <div class="block bg-gray-300 w-12 h-7 rounded-full transition-colors border-2 border-transparent dark:bg-slate-700"></div>
+                    <div class="block bg-gray-200 w-12 h-7 rounded-full transition-colors border-2 border-transparent dark:bg-slate-700"></div>
                     <div class="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full shadow-sm transition-transform"></div>
                 </label>
             </div>
         </div>
     </footer>
 
-    <script src="card01.js"></script>
-    
     <script>
-       
+        /**
+         * URL Parameter Logic
+         * This block looks for ?data=filename in the URL.
+         * Default is 'card01.js'.
+         */
+        const urlParams = new URLSearchParams(window.location.search);
+        const dataFile = urlParams.get('data') || 'card01';
+        const scriptUrl = dataFile.endsWith('.js') ? dataFile : `${dataFile}.js`;
+
+        // Inject the script into the document
+        const scriptTag = document.createElement('script');
+        scriptTag.src = scriptUrl;
+        
+        // Error handling if file is missing
+        scriptTag.onerror = () => {
+            console.error(`Error: Could not load data file "${scriptUrl}"`);
+            alert(`Error: Could not load "${scriptUrl}". Please check the URL parameter.`);
+            document.getElementById('loading-overlay').style.display = 'none';
+        };
+
+        // Initialize app only after script has loaded
+        scriptTag.onload = () => {
+            init();
+            // Hide loading screen
+            const overlay = document.getElementById('loading-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 500);
+        };
+
+        document.body.appendChild(scriptTag);
+
+        /* App State and Logic */
         let currentIndex = 0;
         let autoAdvanceInterval = null;
         let textScrollInterval = null;
         let isGridMode = false;
         let isNightMode = false;
         let isUserHoveringText = false;
-        const AUTO_ADVANCE_DELAY = 10000; // Increased to 10s to allow for text reading
+        const AUTO_ADVANCE_DELAY = 10000;
 
         const appBody = document.getElementById('app-body');
         const sliderContainer = document.getElementById('slider-container');
@@ -232,6 +279,10 @@
         const autoControls = document.getElementById('auto-advance-controls');
 
         function init() {
+            if (typeof CARD_DATA === 'undefined') {
+                console.error("CARD_DATA not found in loaded script.");
+                return;
+            }
             renderCards();
             renderDots();
             updateUI();
@@ -292,17 +343,16 @@
             if (!autoToggle.checked || isGridMode) return;
 
             const activeCard = document.querySelectorAll('.card-wrapper')[currentIndex];
+            if (!activeCard) return;
             const textArea = activeCard.querySelector('.card-text');
             
-            // Wait a moment before starting scroll
             setTimeout(() => {
                 textScrollInterval = setInterval(() => {
-                    if (isUserHoveringText) return; // Pause on hover
-                    
+                    if (isUserHoveringText) return;
                     if (textArea.scrollTop + textArea.clientHeight >= textArea.scrollHeight - 2) {
-                        // End reached, do nothing or loop
+                        // End reached
                     } else {
-                        textArea.scrollTop += 0.5; // Very slow cinematic crawl
+                        textArea.scrollTop += 0.5;
                     }
                 }, 50);
             }, 2000);
@@ -316,7 +366,6 @@
         }
 
         function updateUI() {
-            // Theme Logic
             if (isNightMode) {
                 appBody.classList.add('dark');
                 themeIcon.classList.replace('fa-sun', 'fa-moon');
@@ -327,7 +376,6 @@
                 themeIcon.classList.replace('text-blue-400', 'text-yellow-500');
             }
 
-            // Layout Logic
             if (isGridMode) {
                 sliderContainer.classList.add('grid-mode', 'overflow-y-auto', 'custom-scrollbar');
                 sliderContainer.classList.remove('overflow-hidden');
@@ -434,8 +482,6 @@
                 if (touchEndX > touchStartX + 50) prevSlide();
             }, { passive: true });
         }
-
-        window.onload = init;
     </script>
 </body>
 </html>
