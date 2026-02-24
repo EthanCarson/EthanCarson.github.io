@@ -1,1 +1,721 @@
-Ethan Carson WIP
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Grid Pusher - Portfolio PoC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        touch-action: none;
+        overflow: hidden;
+        background-color: #0f172a;
+      }
+      canvas {
+        image-rendering: pixelated;
+        max-width: 100%;
+        max-height: 70vh;
+        touch-action: none;
+      }
+      .d-pad-btn {
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body
+    class="flex flex-col items-center justify-center min-h-screen p-4 text-slate-100 font-sans">
+    <!-- Header UI -->
+    <div class="w-full max-w-md flex justify-between items-center mb-4">
+      <div>
+        <h1 class="text-xl font-bold text-blue-400">Box Pusher Pro</h1>
+        <p id="stats" class="text-xs text-slate-400 uppercase tracking-widest">
+          Level 1 • Moves: 0
+        </p>
+      </div>
+      <button
+        id="resetBtn"
+        class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+          <path d="M3 3v5h5"></path>
+        </svg>
+        Restart
+      </button>
+    </div>
+
+    <!-- Game Viewport -->
+    <div
+      id="gameContainer"
+      class="relative bg-slate-900 rounded-xl shadow-2xl overflow-hidden border-4 border-slate-700 flex items-center justify-center">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- Victory Overlay -->
+      <div
+        id="victoryOverlay"
+        class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center hidden backdrop-blur-md">
+        <h2 class="text-3xl font-black text-green-400 mb-2">GOAL REACHED!</h2>
+        <p class="text-slate-300 mb-6">Excellent navigation.</p>
+        <button
+          id="nextBtn"
+          class="bg-green-500 hover:bg-green-400 text-slate-900 font-bold px-8 py-3 rounded-full transition-transform active:scale-95">
+          Next Level
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div class="mt-8 grid grid-cols-3 gap-2 md:hidden">
+      <div></div>
+      <button
+        id="upBtn"
+        class="d-pad-btn w-16 h-16 bg-slate-700 rounded-xl flex items-center justify-center active:bg-blue-500 shadow-lg">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="m18 15-6-6-6 6" />
+        </svg>
+      </button>
+      <div></div>
+
+      <button
+        id="leftBtn"
+        class="d-pad-btn w-16 h-16 bg-slate-700 rounded-xl flex items-center justify-center active:bg-blue-500 shadow-lg">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </button>
+      <button
+        id="downBtn"
+        class="d-pad-btn w-16 h-16 bg-slate-700 rounded-xl flex items-center justify-center active:bg-blue-500 shadow-lg">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      <button
+        id="rightBtn"
+        class="d-pad-btn w-16 h-16 bg-slate-700 rounded-xl flex items-center justify-center active:bg-blue-500 shadow-lg">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="mt-6 text-slate-500 text-xs hidden md:block">
+      Hold Direction to Push • Arrows or WASD • R to Restart
+    </div>
+
+    <script>
+      /**
+       * GRAPHICS CONFIGURATION (MEMORY STORE)
+       * * DUAL GRID EXPLANATION:
+       * The index (0-15) is a bitmask of the 4 cells surrounding an intersection:
+       * Binary 0001 (1)  = Top-Left is Wall
+       * Binary 0010 (2)  = Top-Right is Wall
+       * Binary 0100 (4)  = Bottom-Left is Wall
+       * Binary 1000 (8)  = Bottom-Right is Wall
+       */
+      const GRAPHICS_CONFIG = {
+        tileImages: {
+          0: `owtiles/ow tileset heeh-Sheet-Sheet-Sheet1.png`, // Full Dirt (0000)
+          1: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet11.png", // Outer Corner TL (0001: TL only)
+          2: "https://placehold.co/16x16/228b22/ffffff?text=2", // Outer Corner TR (0010: TR only)
+          3: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet10.png", // Top Edge (0011: TL + TR)
+          4: "https://placehold.co/16x16/228b22/ffffff?text=4", // Outer Corner BL (0100: BL only)
+          5: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet8.png", // Left Edge (0101: TL + BL)
+          6: "https://placehold.co/16x16/228b22/ffffff?text=6", // Diagonal TL-BR missing (0110: TR + BL)
+          7: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet12.png", // Inner Corner BR missing (0111: TL + TR + BL)
+          8: "https://placehold.co/16x16/228b22/ffffff?text=8", // Outer Corner BR (1000: BR only)
+          9: "https://placehold.co/16x16/228b22/ffffff?text=9", // Diagonal TR-BL missing (1001: TL + BR)
+          10: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet6.png", // Right Edge (1010: TR + BR)
+          11: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet13.png", // Inner Corner BL missing (1011: TL + TR + BR)
+          12: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet3.png", // Bottom Edge (1100: BL + BR)
+          13: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet14.png", // Inner Corner TR missing (1101: TL + BL + BR)
+          14: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet15.png", // Inner Corner TL missing (1110: TR + BL + BR)
+          15: "owtiles/ow tileset heeh-Sheet-Sheet-Sheet7.png", // Full Grass (1111)
+        },
+
+        // STANDALONE SPRITES
+        boxImage: "owtiles/gif.gif",
+        playerImage: "owtiles/balld.png",
+        goalImage: "owtiles/RainbowBall.png",
+
+        // DRAWING FUNCTIONS
+        drawBox: (ctx, x, y, size, isGoal, image) => {
+          if (image && image.complete) {
+            ctx.drawImage(image, x, y, size, size);
+          } else {
+            ctx.fillStyle = isGoal ? "#16a34a" : "#d97706";
+            ctx.fillRect(
+              x + size * 0.1,
+              y + size * 0.1,
+              size * 0.8,
+              size * 0.8,
+            );
+          }
+        },
+
+        drawPlayer: (ctx, x, y, size, radius, chargeRatio, image) => {
+          if (image && image.complete) {
+            ctx.drawImage(image, x - size / 2, y - size / 2, size, size);
+          } else {
+            const colorVal = 130 + chargeRatio * 100;
+            ctx.fillStyle =
+              chargeRatio > 0 ? `rgb(59, ${colorVal}, 246)` : "#3b82f6";
+            ctx.beginPath();
+            ctx.arc(x, y, size * radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        },
+      };
+
+      /**
+       * ASSET MANAGER
+       */
+      const AssetManager = (() => {
+        const images = {};
+        const fallbacks = {};
+
+        const init = () => {
+          for (let i = 0; i < 16; i++) {
+            const canvas = document.createElement("canvas");
+            canvas.width = 16;
+            canvas.height = 16;
+            const fCtx = canvas.getContext("2d");
+            fCtx.fillStyle = "#b45309";
+            fCtx.fillRect(0, 0, 16, 16);
+            fCtx.fillStyle = "#22c55e";
+            if (i & 1) fCtx.fillRect(0, 0, 8, 8);
+            if (i & 2) fCtx.fillRect(8, 0, 8, 8);
+            if (i & 4) fCtx.fillRect(0, 8, 8, 8);
+            if (i & 8) fCtx.fillRect(8, 8, 8, 8);
+            fallbacks[i] = canvas;
+          }
+
+          Object.entries(GRAPHICS_CONFIG.tileImages).forEach(([mask, url]) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = url;
+            img.onload = () => {
+              images[mask] = img;
+            };
+          });
+
+          const loadSprite = (key, url) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = url;
+            img.onload = () => {
+              images[key] = img;
+            };
+          };
+          loadSprite("box", GRAPHICS_CONFIG.boxImage);
+          loadSprite("player", GRAPHICS_CONFIG.playerImage);
+          loadSprite("goal", GRAPHICS_CONFIG.goalImage);
+        };
+
+        return {
+          init,
+          getTile: (mask) => images[mask] || fallbacks[mask],
+          getSprite: (key) => images[key] || null,
+        };
+      })();
+
+      /**
+       * AUDIO ENGINE
+       */
+      const AudioEngine = (() => {
+        let audioCtx = null;
+        let lastBumpTime = 0;
+        const init = () => {
+          if (!audioCtx)
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        };
+        const playNote = (freq, type, duration, volume = 0.1, decay = true) => {
+          init();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+          if (decay)
+            gain.gain.exponentialRampToValueAtTime(
+              0.0001,
+              audioCtx.currentTime + duration,
+            );
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + duration);
+        };
+        return {
+          wallHit: () => {
+            const now = Date.now();
+            if (now - lastBumpTime > 250) {
+              playNote(60, "sine", 0.1, 0.05);
+              lastBumpTime = now;
+            }
+          },
+          boxPush: () => {
+            playNote(100, "square", 0.1, 0.04);
+            setTimeout(() => playNote(70, "square", 0.15, 0.03), 50);
+          },
+          goalReached: () => {
+            playNote(523.25, "sine", 0.1, 0.1);
+            setTimeout(() => playNote(659.25, "sine", 0.2, 0.1), 80);
+          },
+          levelComplete: () => {
+            [440, 554.37, 659.25, 880].forEach((f, i) =>
+              setTimeout(() => playNote(f, "sine", 0.5, 0.05), i * 100),
+            );
+          },
+        };
+      })();
+
+      const LEVELS = [
+        [
+          "WWWWWWWW",
+          "W......W",
+          "W.B.G..W",
+          "W..P...W",
+          "W..B.G.W",
+          "W......W",
+          "WWWWWWWW",
+        ],
+        [
+          "WWWWWWWW",
+          "W.G...GW",
+          "W..B.B.W",
+          "W..P...W",
+          "W..B.B.W",
+          "W.G...GW",
+          "WWWWWWWW",
+        ],
+      ];
+
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const statsEl = document.getElementById("stats");
+      const victoryOverlay = document.getElementById("victoryOverlay");
+
+      let gameState = {
+        currentLevel: 0,
+        grid: [],
+        player: { x: 0, y: 0, radius: 0.35 },
+        moves: 0,
+        gridW: 0,
+        gridH: 0,
+        tileSize: 0,
+        isComplete: false,
+        keys: new Set(),
+        pushTimer: 0,
+        pushThreshold: 0.18,
+        activePushTarget: null,
+        boxAnimations: [],
+      };
+
+      function initLevel(index = gameState.currentLevel) {
+        const layout = LEVELS[index % LEVELS.length];
+        gameState.currentLevel = index;
+        gameState.grid = layout.map((row) => row.split(""));
+        gameState.gridH = gameState.grid.length;
+        gameState.gridW = gameState.grid[0].length;
+        gameState.moves = 0;
+        gameState.isComplete = false;
+        gameState.pushTimer = 0;
+        gameState.activePushTarget = null;
+        gameState.boxAnimations = [];
+        victoryOverlay.classList.add("hidden");
+
+        for (let y = 0; y < gameState.gridH; y++) {
+          for (let x = 0; x < gameState.gridW; x++) {
+            if (gameState.grid[y][x] === "P") {
+              gameState.player.x = x + 0.5;
+              gameState.player.y = y + 0.5;
+              gameState.grid[y][x] = ".";
+            }
+          }
+        }
+        resizeCanvas();
+        updateStats();
+      }
+
+      function resizeCanvas() {
+        const padding = 60;
+        const availableWidth = window.innerWidth - padding;
+        const availableHeight = window.innerHeight * 0.6;
+        const aspect = gameState.gridW / gameState.gridH;
+        if (availableWidth / availableHeight > aspect) {
+          canvas.height = availableHeight;
+          canvas.width = availableHeight * aspect;
+        } else {
+          canvas.width = availableWidth;
+          canvas.height = availableWidth / aspect;
+        }
+        gameState.tileSize = canvas.width / gameState.gridW;
+      }
+
+      function updateStats() {
+        statsEl.innerText = `Level ${gameState.currentLevel + 1} • Moves: ${gameState.moves}`;
+      }
+
+      function tryPushBox(gridX, gridY, dx, dy) {
+        const targetX = gridX + dx;
+        const targetY = gridY + dy;
+        if (
+          targetX < 0 ||
+          targetX >= gameState.gridW ||
+          targetY < 0 ||
+          targetY >= gameState.gridH
+        )
+          return false;
+        if (
+          gameState.boxAnimations.some(
+            (a) => a.tx === targetX && a.ty === targetY,
+          )
+        )
+          return false;
+        const targetCell = gameState.grid[targetY][targetX];
+        if (targetCell === "." || targetCell === "G") {
+          const currentCell = gameState.grid[gridY][gridX];
+          gameState.grid[gridY][gridX] = currentCell === "X" ? "G" : ".";
+          const isNowOnGoal = targetCell === "G";
+          gameState.grid[targetY][targetX] = isNowOnGoal ? "X" : "B";
+          gameState.boxAnimations.push({
+            tx: targetX,
+            ty: targetY,
+            ox: -dx,
+            oy: -dy,
+            progress: 1.0,
+            isGoal: isNowOnGoal,
+          });
+          if (isNowOnGoal && currentCell !== "X") AudioEngine.goalReached();
+          else AudioEngine.boxPush();
+          gameState.moves++;
+          updateStats();
+          checkWin();
+          return true;
+        }
+        return false;
+      }
+
+      function checkWin() {
+        for (let y = 0; y < gameState.gridH; y++) {
+          for (let x = 0; x < gameState.gridW; x++)
+            if (gameState.grid[y][x] === "B") return;
+        }
+        if (gameState.boxAnimations.length > 0) return;
+        gameState.isComplete = true;
+        victoryOverlay.classList.remove("hidden");
+        AudioEngine.levelComplete();
+      }
+
+      function checkCollision(newX, newY) {
+        const r = gameState.player.radius;
+        const corners = [
+          { x: newX - r, y: newY - r },
+          { x: newX + r, y: newY - r },
+          { x: newX - r, y: newY + r },
+          { x: newX + r, y: newY + r },
+        ];
+        for (let c of corners) {
+          const gx = Math.floor(c.x),
+            gy = Math.floor(c.y);
+          if (
+            gx < 0 ||
+            gx >= gameState.gridW ||
+            gy < 0 ||
+            gy >= gameState.gridH
+          )
+            return "W";
+          const cell = gameState.grid[gy][gx];
+          if (cell === "W") return "W";
+          if (cell === "B" || cell === "X") return { type: "B", gx, gy };
+        }
+        return null;
+      }
+
+      let lastTime = 0;
+      function update(time) {
+        const dt = (time - lastTime) / 1000;
+        lastTime = time;
+        const animSpeed = 8.0;
+        for (let i = gameState.boxAnimations.length - 1; i >= 0; i--) {
+          const anim = gameState.boxAnimations[i];
+          anim.progress -= animSpeed * dt;
+          if (anim.progress <= 0) {
+            gameState.boxAnimations.splice(i, 1);
+            checkWin();
+          }
+        }
+        if (!gameState.isComplete) {
+          const speed = 4.0;
+          let dx = 0,
+            dy = 0;
+          if (gameState.keys.has("arrowup") || gameState.keys.has("w")) dy -= 1;
+          if (gameState.keys.has("arrowdown") || gameState.keys.has("s"))
+            dy += 1;
+          if (gameState.keys.has("arrowleft") || gameState.keys.has("a"))
+            dx -= 1;
+          if (gameState.keys.has("arrowright") || gameState.keys.has("d"))
+            dx += 1;
+          if (dx !== 0 || dy !== 0) {
+            const mag = Math.sqrt(dx * dx + dy * dy);
+            resolveMovement(
+              (dx / mag) * speed * dt,
+              (dy / mag) * speed * dt,
+              dx / mag,
+              dy / mag,
+              dt,
+            );
+          } else {
+            gameState.pushTimer = 0;
+            gameState.activePushTarget = null;
+          }
+        }
+        render();
+        requestAnimationFrame(update);
+      }
+
+      function resolveMovement(mx, my, normX, normY, dt) {
+        const p = gameState.player;
+        let currentFramePushTarget = null;
+        const hitX = checkCollision(p.x + mx, p.y);
+        if (!hitX) p.x += mx;
+        else {
+          if (hitX === "W") AudioEngine.wallHit();
+          if (hitX.type === "B")
+            currentFramePushTarget = { ...hitX, dx: Math.sign(normX), dy: 0 };
+        }
+        const hitY = checkCollision(p.x, p.y + my);
+        if (!hitY) p.y += my;
+        else {
+          if (hitY === "W") AudioEngine.wallHit();
+          if (hitY.type === "B")
+            if (!currentFramePushTarget || Math.abs(my) > Math.abs(mx))
+              currentFramePushTarget = { ...hitY, dx: 0, dy: Math.sign(normY) };
+        }
+        if (currentFramePushTarget) {
+          const target = currentFramePushTarget;
+          const isAnimating = gameState.boxAnimations.some(
+            (a) =>
+              (a.tx === target.gx && a.ty === target.gy) ||
+              (a.tx + a.ox * a.progress === target.gx &&
+                a.ty + a.oy * a.progress === target.gy),
+          );
+          if (
+            !isAnimating &&
+            gameState.activePushTarget &&
+            gameState.activePushTarget.gx === target.gx &&
+            gameState.activePushTarget.gy === target.gy
+          ) {
+            gameState.pushTimer += dt;
+            if (gameState.pushTimer >= gameState.pushThreshold)
+              if (tryPushBox(target.gx, target.gy, target.dx, target.dy))
+                gameState.pushTimer = 0;
+              else {
+                AudioEngine.wallHit();
+                gameState.pushTimer = 0;
+              }
+          } else if (!isAnimating) {
+            gameState.pushTimer = 0;
+            gameState.activePushTarget = target;
+          }
+        } else {
+          gameState.pushTimer = 0;
+          gameState.activePushTarget = null;
+        }
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const size = gameState.tileSize;
+
+        // 1. DUAL GRID ENVIRONMENT
+        for (let y = 0; y <= gameState.gridH; y++) {
+          for (let x = 0; x <= gameState.gridW; x++) {
+            let mask = 0;
+            const getCell = (gx, gy) => {
+              if (
+                gx < 0 ||
+                gx >= gameState.gridW ||
+                gy < 0 ||
+                gy >= gameState.gridH
+              )
+                return 1;
+              return gameState.grid[gy][gx] === "W" ? 1 : 0;
+            };
+            if (getCell(x - 1, y - 1)) mask |= 1;
+            if (getCell(x, y - 1)) mask |= 2;
+            if (getCell(x - 1, y)) mask |= 4;
+            if (getCell(x, y)) mask |= 8;
+
+            const tileImg = AssetManager.getTile(mask);
+            if (tileImg) {
+              ctx.drawImage(
+                tileImg,
+                (x - 0.5) * size,
+                (y - 0.5) * size,
+                size,
+                size,
+              );
+            }
+          }
+        }
+
+        // 2. INTERACTIVE ELEMENTS
+        const boxSprite = AssetManager.getSprite("box");
+        const goalSprite = AssetManager.getSprite("goal");
+
+        for (let y = 0; y < gameState.gridH; y++) {
+          for (let x = 0; x < gameState.gridW; x++) {
+            const cell = gameState.grid[y][x];
+            if (cell === "G" || cell === "X") {
+              if (goalSprite && goalSprite.complete) {
+                ctx.drawImage(goalSprite, x * size, y * size, size, size);
+              } else {
+                ctx.strokeStyle = "#22c55e";
+                ctx.setLineDash([4, 4]);
+                ctx.strokeRect(
+                  x * size + size * 0.2,
+                  y * size + size * 0.2,
+                  size * 0.6,
+                  size * 0.6,
+                );
+                ctx.setLineDash([]);
+              }
+            }
+            if (
+              (cell === "B" || cell === "X") &&
+              !gameState.boxAnimations.some((a) => a.tx === x && a.ty === y)
+            ) {
+              GRAPHICS_CONFIG.drawBox(
+                ctx,
+                x * size,
+                y * size,
+                size,
+                cell === "X",
+                boxSprite,
+              );
+            }
+          }
+        }
+
+        for (const anim of gameState.boxAnimations) {
+          GRAPHICS_CONFIG.drawBox(
+            ctx,
+            (anim.tx + anim.ox * anim.progress) * size,
+            (anim.ty + anim.oy * anim.progress) * size,
+            size,
+            anim.isGoal,
+            boxSprite,
+          );
+        }
+
+        // 3. PLAYER
+        const chargeRatio = Math.min(
+          gameState.pushTimer / gameState.pushThreshold,
+          1,
+        );
+        const playerSprite = AssetManager.getSprite("player");
+        GRAPHICS_CONFIG.drawPlayer(
+          ctx,
+          gameState.player.x * size,
+          gameState.player.y * size,
+          size,
+          gameState.player.radius,
+          chargeRatio,
+          playerSprite,
+        );
+      }
+
+      window.addEventListener("keydown", (e) => {
+        const key = e.key.toLowerCase();
+        if (
+          ["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)
+        )
+          e.preventDefault();
+        gameState.keys.add(key);
+        if (key === "r") initLevel();
+      });
+      window.addEventListener("keyup", (e) =>
+        gameState.keys.delete(e.key.toLowerCase()),
+      );
+      const bindMobile = (id, key) => {
+        const btn = document.getElementById(id);
+        btn.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          gameState.keys.add(key);
+        });
+        btn.addEventListener("touchend", (e) => {
+          e.preventDefault();
+          gameState.keys.delete(key);
+        });
+        btn.addEventListener("mousedown", () => gameState.keys.add(key));
+        btn.addEventListener("mouseup", () => gameState.keys.delete(key));
+        btn.addEventListener("mouseleave", () => gameState.keys.delete(key));
+      };
+      bindMobile("upBtn", "arrowup");
+      bindMobile("downBtn", "arrowdown");
+      bindMobile("leftBtn", "arrowleft");
+      bindMobile("rightBtn", "arrowright");
+      document
+        .getElementById("resetBtn")
+        .addEventListener("click", () => initLevel());
+      document
+        .getElementById("nextBtn")
+        .addEventListener("click", () => initLevel(gameState.currentLevel + 1));
+      window.addEventListener("resize", resizeCanvas);
+      window.onload = () => {
+        AssetManager.init();
+        initLevel(0);
+        requestAnimationFrame(update);
+      };
+    </script>
+  </body>
+</html>
