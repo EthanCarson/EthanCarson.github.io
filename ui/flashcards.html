@@ -48,6 +48,20 @@
         .progress-bar {
             transition: width 0.4s ease;
         }
+
+        /* Loading Spinner */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-950 min-h-screen flex flex-col items-center p-4 md:p-8 transition-colors duration-300">
@@ -60,7 +74,6 @@
         </div>
         
         <div class="flex items-center gap-4">
-            <!-- Theme Toggle -->
             <button id="themeToggle" class="p-3 rounded-full bg-white dark:bg-slate-800 shadow-md hover:scale-110 transition-transform">
                 <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
@@ -75,16 +88,16 @@
     <main class="w-full max-w-2xl">
         <!-- Deck Selector -->
         <div class="flex flex-wrap justify-center gap-2 mb-8" id="deckSelector">
-            <button data-deck="science" class="px-4 py-2 rounded-full font-medium bg-indigo-600 text-white shadow-lg shadow-indigo-200 transition-all">Science & Nature</button>
-            <button data-deck="history" class="px-4 py-2 rounded-full font-medium bg-white text-slate-600 hover:bg-slate-100 transition-all">World History</button>
-            <button data-deck="coding" class="px-4 py-2 rounded-full font-medium bg-white text-slate-600 hover:bg-slate-100 transition-all">Web Dev Basics</button>
+            <button data-file="flashcard_sci.js" class="px-4 py-2 rounded-full font-medium bg-indigo-600 text-white shadow-lg shadow-indigo-200 transition-all">Science & Nature</button>
+            <button data-file="flashcard_history.js" class="px-4 py-2 rounded-full font-medium bg-white text-slate-600 hover:bg-slate-100 transition-all">World History</button>
+            <button data-file="flashcard_code.js" class="px-4 py-2 rounded-full font-medium bg-white text-slate-600 hover:bg-slate-100 transition-all">Web Dev Basics</button>
         </div>
 
         <!-- Progress Indicator -->
         <div class="mb-4">
             <div class="flex justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                <span id="cardCounter">Card 1 of 10</span>
-                <span id="percentComplete">10%</span>
+                <span id="cardCounter">Awaiting Data...</span>
+                <span id="percentComplete">0%</span>
             </div>
             <div class="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div id="progressBar" class="progress-bar h-full bg-indigo-500 w-0"></div>
@@ -96,17 +109,21 @@
             <div id="flashcard" class="card-inner">
                 <!-- Front -->
                 <div class="card-front bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                    <div class="flex flex-col items-center">
-                        <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-4 tracking-widest" id="frontCategory">Category</span>
-                        <h2 class="text-2xl md:text-4xl font-black text-center text-slate-950 dark:text-white leading-tight" id="cardQuestion">Question loading...</h2>
+                    <div id="cardContentFront" class="flex flex-col items-center">
+                        <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-4 tracking-widest" id="frontCategory">...</span>
+                        <h2 class="text-2xl md:text-4xl font-black text-center text-slate-950 dark:text-white leading-tight" id="cardQuestion">Loading cards...</h2>
                         <p class="text-slate-500 dark:text-slate-400 text-sm mt-8 italic">Click to [Catch you on the flipside!]</p>
+                    </div>
+                    <div id="loadingOverlay" class="hidden flex flex-col items-center gap-4">
+                        <div class="loader"></div>
+                        <p class="text-indigo-600 font-bold tracking-widest uppercase text-xs">Fetching Data</p>
                     </div>
                 </div>
                 <!-- Back -->
                 <div class="card-back bg-indigo-50 dark:bg-slate-900 border-2 border-indigo-200 dark:border-indigo-900">
                     <div class="flex flex-col items-center">
                         <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-4 tracking-widest">The Answer</span>
-                        <p class="text-xl md:text-3xl font-bold text-center text-slate-900 dark:text-slate-100" id="cardAnswer">Answer loading...</p>
+                        <p class="text-xl md:text-3xl font-bold text-center text-slate-900 dark:text-slate-100" id="cardAnswer">...</p>
                         <p class="text-slate-500 dark:text-slate-400 text-sm mt-8 italic">Click to flip back</p>
                     </div>
                 </div>
@@ -136,40 +153,11 @@
     </footer>
 
     <script>
-        /** * DATA SOURCES
-         * Simulated 3 different "files" as objects
-         */
-        const scienceData = [
-            { question: "What is the powerhouse of the cell?", answer: "Mitochondria", cat: "Biology" },
-            { question: "Which planet is known as the Red Planet?", answer: "Mars", cat: "Astronomy" },
-            { question: "What is the atomic number of Gold?", answer: "79", cat: "Chemistry" },
-            { question: "What gas do plants absorb during photosynthesis?", answer: "Carbon Dioxide (CO2)", cat: "Botany" }
-        ];
-
-        const historyData = [
-            { question: "In what year did World War II end?", answer: "1945", cat: "20th Century" },
-            { question: "Who was the first female pilot to fly solo across the Atlantic?", answer: "Amelia Earhart", cat: "Aviation" },
-            { question: "The Magna Carta was signed in which year?", answer: "1215", cat: "Medieval" },
-            { question: "Who was the first Emperor of Rome?", answer: "Augustus Caesar", cat: "Ancient Rome" }
-        ];
-
-        const codingData = [
-            { question: "What does DOM stand for?", answer: "Document Object Model", cat: "Web Dev" },
-            { question: "Which language is used for styling web pages?", answer: "CSS", cat: "Design" },
-            { question: "What is the 'vanilla' version of a programming language?", answer: "The version without any libraries or frameworks", cat: "Core" },
-            { question: "Which keyword is used to declare a block-scoped variable in JS?", answer: "let or const", cat: "JS Syntax" }
-        ];
-
         // App State
-        const decks = {
-            science: scienceData,
-            history: historyData,
-            coding: codingData
-        };
-        
-        let currentDeckKey = 'science';
+        let currentDeck = [];
         let currentIndex = 0;
         let isDarkMode = false;
+        let isLoading = false;
 
         // DOM Elements
         const flashcard = document.getElementById('flashcard');
@@ -185,18 +173,49 @@
         const cardCounter = document.getElementById('cardCounter');
         const percentText = document.getElementById('percentComplete');
         const progressBar = document.getElementById('progressBar');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const cardContentFront = document.getElementById('cardContentFront');
 
-        // Initialization
-        function init() {
-            updateCard();
-            setupEventListeners();
+        /**
+         * The Big Shot! Dynamic Fetcher
+         * Pulls data from external files while keeping users happy.
+         */
+        async function loadDeck(filename) {
+            setLoading(true);
+            try {
+                // We fetch the file. This expects a JSON structure in the .js file 
+                // or a JSON file directly. 
+                const response = await fetch(filename);
+                if (!response.ok) throw new Error("File not found");
+                
+                const data = await response.json();
+                currentDeck = data;
+                currentIndex = 0;
+                updateCard();
+            } catch (err) {
+                console.error("Calamity!", err);
+                questionEl.textContent = "Error loading data. Ensure " + filename + " exists!";
+                categoryEl.textContent = "System Error";
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setLoading(state) {
+            isLoading = state;
+            if (isLoading) {
+                loadingOverlay.classList.remove('hidden');
+                cardContentFront.classList.add('invisible');
+            } else {
+                loadingOverlay.classList.add('hidden');
+                cardContentFront.classList.remove('invisible');
+            }
         }
 
         function updateCard() {
-            const currentDeck = decks[currentDeckKey];
-            const card = currentDeck[currentIndex];
+            if (currentDeck.length === 0) return;
             
-            // Force flip back before changing content for smoothness
+            const card = currentDeck[currentIndex];
             flashcard.classList.remove('is-flipped');
             
             setTimeout(() => {
@@ -204,44 +223,34 @@
                 answerEl.textContent = card.answer;
                 categoryEl.textContent = card.cat;
                 
-                // Update Progress
                 const total = currentDeck.length;
                 const progress = ((currentIndex + 1) / total) * 100;
                 cardCounter.textContent = `Card ${currentIndex + 1} of ${total}`;
                 percentText.textContent = `${Math.round(progress)}%`;
                 progressBar.style.width = `${progress}%`;
-
-                // Navigation buttons are always active in "Merry-go-round" mode
-                prevBtn.disabled = false;
-                prevBtn.style.opacity = "1";
             }, 150);
         }
 
         function setupEventListeners() {
-            // Card Flip
             flashcard.addEventListener('click', () => {
-                flashcard.classList.toggle('is-flipped');
+                if (!isLoading) flashcard.classList.toggle('is-flipped');
             });
 
-            // Navigation - Advancing Forward
             nextBtn.addEventListener('click', () => {
-                const currentDeck = decks[currentDeckKey];
+                if (currentDeck.length === 0) return;
                 currentIndex = (currentIndex + 1) % currentDeck.length;
                 updateCard();
             });
 
-            // Navigation - Moving Backwards (Merry-go-round mode!)
             prevBtn.addEventListener('click', () => {
-                const currentDeck = decks[currentDeckKey];
-                // Wraps to end if at beginning
+                if (currentDeck.length === 0) return;
+                // The Merry-go-round logic!
                 currentIndex = (currentIndex - 1 + currentDeck.length) % currentDeck.length;
                 updateCard();
             });
 
-            // Deck Selection
             deckButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    // Update UI
                     deckButtons.forEach(b => {
                         b.classList.remove('bg-indigo-600', 'text-white', 'shadow-indigo-200');
                         b.classList.add('bg-white', 'text-slate-600');
@@ -249,14 +258,10 @@
                     btn.classList.add('bg-indigo-600', 'text-white', 'shadow-indigo-200');
                     btn.classList.remove('bg-white', 'text-slate-600');
 
-                    // Update Data
-                    currentDeckKey = btn.dataset.deck;
-                    currentIndex = 0;
-                    updateCard();
+                    loadDeck(btn.dataset.file);
                 });
             });
 
-            // Theme Toggle
             themeToggle.addEventListener('click', () => {
                 isDarkMode = !isDarkMode;
                 document.documentElement.classList.toggle('dark');
@@ -274,20 +279,18 @@
                 }
             });
 
-            // Keyboard Shortcuts
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowRight' || e.key === ' ') {
-                    nextBtn.click();
-                } else if (e.key === 'ArrowLeft') {
-                    prevBtn.click();
-                } else if (e.key === 'f' || e.key === 'Enter') {
-                    flashcard.click();
-                }
+                if (e.key === 'ArrowRight' || e.key === ' ') nextBtn.click();
+                else if (e.key === 'ArrowLeft') prevBtn.click();
+                else if (e.key === 'f' || e.key === 'Enter') flashcard.click();
             });
         }
 
-        // Start the app
-        window.onload = init;
+        window.onload = () => {
+            setupEventListeners();
+            // Load the first deck by default
+            loadDeck('flashcard_sci.js');
+        };
     </script>
 </body>
 </html>
