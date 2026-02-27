@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Flashcard Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Card Flip Animation */
+        .card-container {
+            perspective: 1000px;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Dark Mode Transitions */
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            transition: width 0.4s ease;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-950 min-h-screen flex flex-col items-center p-4 md:p-8 transition-colors duration-300">
+
+    <!-- Header Section -->
+    <header class="w-full max-w-4xl flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight">Flash<span class="text-indigo-600">Pro</span></h1>
+            <p class="text-slate-500 text-sm">Level up your learning [Works like a charm!]</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- Theme Toggle -->
+            <button id="themeToggle" class="p-3 rounded-full bg-white dark:bg-slate-800 shadow-md hover:scale-110 transition-transform">
+                <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+                <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-400 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-2xl">
+        <!-- Deck Selector -->
+        <div class="flex flex-wrap justify-center gap-2 mb-8" id="deckSelector">
+            <button data-deck="science" class="px-4 py-2 rounded-full font-medium bg-indigo-600 text-white shadow-lg shadow-indigo-200 transition-all">Science & Nature</button>
+            <button data-deck="history" class="px-4 py-2 rounded-full font-medium bg-white text-slate-600 hover:bg-slate-100 transition-all">World History</button>
+            <button data-deck="coding" class="px-4 py-2 rounded-full font-medium bg-white text-slate-600 hover:bg-slate-100 transition-all">Web Dev Basics</button>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="mb-4">
+            <div class="flex justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                <span id="cardCounter">Card 1 of 10</span>
+                <span id="percentComplete">10%</span>
+            </div>
+            <div class="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div id="progressBar" class="progress-bar h-full bg-indigo-500 w-0"></div>
+            </div>
+        </div>
+
+        <!-- Flash Card Stage -->
+        <div class="card-container w-full aspect-[4/3] md:aspect-[16/9] mb-8">
+            <div id="flashcard" class="card-inner">
+                <!-- Front -->
+                <div class="card-front bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-4 tracking-widest" id="frontCategory">Category</span>
+                        <h2 class="text-2xl md:text-4xl font-black text-center text-slate-950 dark:text-white leading-tight" id="cardQuestion">Question loading...</h2>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm mt-8 italic">Click to [Catch you on the flipside!]</p>
+                    </div>
+                </div>
+                <!-- Back -->
+                <div class="card-back bg-indigo-50 dark:bg-slate-900 border-2 border-indigo-200 dark:border-indigo-900">
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-4 tracking-widest">The Answer</span>
+                        <p class="text-xl md:text-3xl font-bold text-center text-slate-900 dark:text-slate-100" id="cardAnswer">Answer loading...</p>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm mt-8 italic">Click to flip back</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Controls -->
+        <div class="flex justify-between items-center gap-4">
+            <button id="prevBtn" class="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white dark:bg-slate-800 rounded-2xl shadow hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all text-slate-700 dark:text-slate-300 font-bold border border-slate-200 dark:border-slate-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+            </button>
+            
+            <button id="nextBtn" class="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 transition-all font-bold">
+                Next Card
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+    </main>
+
+    <footer class="mt-auto pt-12 pb-4 text-slate-500 text-sm font-medium">
+        [Finest Quality] Learning App &copy; 2024
+    </footer>
+
+    <script>
+        /** * DATA SOURCES
+         * Simulated 3 different "files" as objects
+         */
+        const scienceData = [
+            { question: "What is the powerhouse of the cell?", answer: "Mitochondria", cat: "Biology" },
+            { question: "Which planet is known as the Red Planet?", answer: "Mars", cat: "Astronomy" },
+            { question: "What is the atomic number of Gold?", answer: "79", cat: "Chemistry" },
+            { question: "What gas do plants absorb during photosynthesis?", answer: "Carbon Dioxide (CO2)", cat: "Botany" }
+        ];
+
+        const historyData = [
+            { question: "In what year did World War II end?", answer: "1945", cat: "20th Century" },
+            { question: "Who was the first female pilot to fly solo across the Atlantic?", answer: "Amelia Earhart", cat: "Aviation" },
+            { question: "The Magna Carta was signed in which year?", answer: "1215", cat: "Medieval" },
+            { question: "Who was the first Emperor of Rome?", answer: "Augustus Caesar", cat: "Ancient Rome" }
+        ];
+
+        const codingData = [
+            { question: "What does DOM stand for?", answer: "Document Object Model", cat: "Web Dev" },
+            { question: "Which language is used for styling web pages?", answer: "CSS", cat: "Design" },
+            { question: "What is the 'vanilla' version of a programming language?", answer: "The version without any libraries or frameworks", cat: "Core" },
+            { question: "Which keyword is used to declare a block-scoped variable in JS?", answer: "let or const", cat: "JS Syntax" }
+        ];
+
+        // App State
+        const decks = {
+            science: scienceData,
+            history: historyData,
+            coding: codingData
+        };
+        
+        let currentDeckKey = 'science';
+        let currentIndex = 0;
+        let isDarkMode = false;
+
+        // DOM Elements
+        const flashcard = document.getElementById('flashcard');
+        const questionEl = document.getElementById('cardQuestion');
+        const answerEl = document.getElementById('cardAnswer');
+        const categoryEl = document.getElementById('frontCategory');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const themeToggle = document.getElementById('themeToggle');
+        const sunIcon = document.getElementById('sunIcon');
+        const moonIcon = document.getElementById('moonIcon');
+        const deckButtons = document.querySelectorAll('#deckSelector button');
+        const cardCounter = document.getElementById('cardCounter');
+        const percentText = document.getElementById('percentComplete');
+        const progressBar = document.getElementById('progressBar');
+
+        // Initialization
+        function init() {
+            updateCard();
+            setupEventListeners();
+        }
+
+        function updateCard() {
+            const currentDeck = decks[currentDeckKey];
+            const card = currentDeck[currentIndex];
+            
+            // Force flip back before changing content for smoothness
+            flashcard.classList.remove('is-flipped');
+            
+            setTimeout(() => {
+                questionEl.textContent = card.question;
+                answerEl.textContent = card.answer;
+                categoryEl.textContent = card.cat;
+                
+                // Update Progress
+                const total = currentDeck.length;
+                const progress = ((currentIndex + 1) / total) * 100;
+                cardCounter.textContent = `Card ${currentIndex + 1} of ${total}`;
+                percentText.textContent = `${Math.round(progress)}%`;
+                progressBar.style.width = `${progress}%`;
+
+                // Navigation buttons are always active in "Merry-go-round" mode
+                prevBtn.disabled = false;
+                prevBtn.style.opacity = "1";
+            }, 150);
+        }
+
+        function setupEventListeners() {
+            // Card Flip
+            flashcard.addEventListener('click', () => {
+                flashcard.classList.toggle('is-flipped');
+            });
+
+            // Navigation - Advancing Forward
+            nextBtn.addEventListener('click', () => {
+                const currentDeck = decks[currentDeckKey];
+                currentIndex = (currentIndex + 1) % currentDeck.length;
+                updateCard();
+            });
+
+            // Navigation - Moving Backwards (Merry-go-round mode!)
+            prevBtn.addEventListener('click', () => {
+                const currentDeck = decks[currentDeckKey];
+                // Wraps to end if at beginning
+                currentIndex = (currentIndex - 1 + currentDeck.length) % currentDeck.length;
+                updateCard();
+            });
+
+            // Deck Selection
+            deckButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Update UI
+                    deckButtons.forEach(b => {
+                        b.classList.remove('bg-indigo-600', 'text-white', 'shadow-indigo-200');
+                        b.classList.add('bg-white', 'text-slate-600');
+                    });
+                    btn.classList.add('bg-indigo-600', 'text-white', 'shadow-indigo-200');
+                    btn.classList.remove('bg-white', 'text-slate-600');
+
+                    // Update Data
+                    currentDeckKey = btn.dataset.deck;
+                    currentIndex = 0;
+                    updateCard();
+                });
+            });
+
+            // Theme Toggle
+            themeToggle.addEventListener('click', () => {
+                isDarkMode = !isDarkMode;
+                document.documentElement.classList.toggle('dark');
+                
+                if (isDarkMode) {
+                    document.body.classList.remove('bg-slate-50', 'text-slate-950');
+                    document.body.classList.add('bg-slate-950', 'text-white');
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                } else {
+                    document.body.classList.add('bg-slate-50', 'text-slate-950');
+                    document.body.classList.remove('bg-slate-950', 'text-white');
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                }
+            });
+
+            // Keyboard Shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === ' ') {
+                    nextBtn.click();
+                } else if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                } else if (e.key === 'f' || e.key === 'Enter') {
+                    flashcard.click();
+                }
+            });
+        }
+
+        // Start the app
+        window.onload = init;
+    </script>
+</body>
+</html>
