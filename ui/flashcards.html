@@ -116,7 +116,7 @@
                     </div>
                     <div id="loadingOverlay" class="hidden flex flex-col items-center gap-4">
                         <div class="loader"></div>
-                        <p class="text-indigo-600 font-bold tracking-widest uppercase text-xs">Fetching Data</p>
+                        <p class="text-indigo-600 font-bold tracking-widest uppercase text-xs">Parsing JS Object</p>
                     </div>
                 </div>
                 <!-- Back -->
@@ -177,24 +177,47 @@
         const cardContentFront = document.getElementById('cardContentFront');
 
         /**
-         * The Big Shot! Dynamic Fetcher
-         * Pulls data from external files while keeping users happy.
+         * The Big Shot! Intelligence Fetcher
+         * Now capable of [[Reading and Comprehending]] JS files!
          */
         async function loadDeck(filename) {
             setLoading(true);
             try {
-                // We fetch the file. This expects a JSON structure in the .js file 
-                // or a JSON file directly. 
                 const response = await fetch(filename);
                 if (!response.ok) throw new Error("File not found");
                 
-                const data = await response.json();
-                currentDeck = data;
-                currentIndex = 0;
-                updateCard();
+                // Get the file content as text rather than pure JSON
+                const fileText = await response.text();
+                
+                // --- THE MAGIC PARSER ---
+                // We find the first '[' and the last ']' to extract the array portion
+                const startIdx = fileText.indexOf('[');
+                const endIdx = fileText.lastIndexOf(']') + 1;
+                
+                if (startIdx === -1 || endIdx === 0) {
+                    throw new Error("No data structure found in file!");
+                }
+                
+                const arrayString = fileText.substring(startIdx, endIdx);
+                
+                /**
+                 * Since it's a JS object, not necessarily strict JSON, 
+                 * we use the safe "Function Constructor" trick to evaluate the 
+                 * string into a real JavaScript Array.
+                 */
+                const data = new Function(`return ${arrayString}`)();
+                
+                if (Array.isArray(data)) {
+                    currentDeck = data;
+                    currentIndex = 0;
+                    updateCard();
+                } else {
+                    throw new Error("Data is not an array!");
+                }
+                
             } catch (err) {
                 console.error("Calamity!", err);
-                questionEl.textContent = "Error loading data. Ensure " + filename + " exists!";
+                questionEl.textContent = "Error: Check format of " + filename;
                 categoryEl.textContent = "System Error";
             } finally {
                 setLoading(false);
