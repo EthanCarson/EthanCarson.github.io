@@ -59,8 +59,36 @@
 
     <script>
         // --- State Management ---
-        const STORAGE_KEY = 'perfect_circle_personal_best';
-        let personalBest = parseFloat(localStorage.getItem(STORAGE_KEY)) || 0;
+        const STORAGE_KEY = 'perfect_circle_app_data';
+        const PROJECT_ID = 0;
+        
+        // Scoped Data Loading
+        function loadPersonalBest() {
+            try {
+                const rawData = localStorage.getItem(STORAGE_KEY);
+                if (rawData) {
+                    const parsed = JSON.parse(rawData);
+                    // Only use data if it belongs to this Project ID
+                    if (parsed.PROJECT_ID === PROJECT_ID) {
+                        return parseFloat(parsed.personalBest) || 0;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load local storage data:", e);
+            }
+            return 0;
+        }
+
+        function savePersonalBest(score) {
+            const dataToSave = {
+                PROJECT_ID: PROJECT_ID,
+                personalBest: score,
+                lastUpdated: Date.now()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+        }
+
+        let personalBest = loadPersonalBest();
         
         // Update UI with initial best
         document.getElementById('high-score-display').innerText = `${personalBest.toFixed(1)}%`;
@@ -87,7 +115,6 @@
 
         function drawBackground() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Draw a subtle center point to guide the user
             ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
             ctx.beginPath();
             ctx.arc(canvas.width/2, canvas.height/2, 4, 0, Math.PI * 2);
@@ -135,7 +162,6 @@
             if (!isDrawing || drawingEnded) return;
             isDrawing = false;
             
-            // Minimal points check to avoid accidental clicks
             if (points.length < 15) {
                 resetGame();
                 return;
@@ -148,13 +174,11 @@
 
         // --- Logic & Scoring ---
         function calculateResult(duration) {
-            // 1. Find the average center (centroid) of the drawn points
             let sumX = 0, sumY = 0;
             points.forEach(p => { sumX += p.x; sumY += p.y; });
             const centerX = sumX / points.length;
             const centerY = sumY / points.length;
 
-            // 2. Calculate average radius from that center
             let totalRadius = 0;
             const distances = points.map(p => {
                 const d = Math.sqrt(Math.pow(p.x - centerX, 2) + Math.pow(p.y - centerY, 2));
@@ -163,29 +187,25 @@
             });
             const avgRadius = totalRadius / points.length;
 
-            // 3. Calculate Variance (Consistency)
             let totalDeviation = 0;
             distances.forEach(d => {
                 totalDeviation += Math.abs(d - avgRadius);
             });
             const avgDeviation = totalDeviation / points.length;
             
-            // Accuracy: 100% minus the relative deviation
-            // We multiply the deviation slightly to make getting 100% truly difficult
             let accuracy = Math.max(0, 100 * (1 - (avgDeviation / avgRadius * 1.5)));
             
-            // Check if the shape is closed (distance between start and end)
             const start = points[0];
             const end = points[points.length - 1];
             const gap = Math.sqrt(Math.pow(start.x - end.x, 2) + Math.pow(start.y - end.y, 2));
-            const closurePenalty = Math.max(0, (gap / avgRadius) * 20); // Penalty if circle isn't closed
+            const closurePenalty = Math.max(0, (gap / avgRadius) * 20);
             
             accuracy = Math.max(0, accuracy - closurePenalty);
 
-            // Handle High Score
+            // Scoped High Score Management
             if (accuracy > personalBest) {
                 personalBest = accuracy;
-                localStorage.setItem(STORAGE_KEY, personalBest);
+                savePersonalBest(personalBest);
                 document.getElementById('high-score-display').innerText = `${personalBest.toFixed(1)}%`;
             }
 
@@ -193,7 +213,6 @@
         }
 
         function showModal(score, time, cx, cy, r) {
-            // Visual feedback: Draw the "perfect" version of their circle
             ctx.setLineDash([10, 10]);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
             ctx.beginPath();
@@ -233,7 +252,6 @@
             drawBackground();
         };
 
-        // Event Listeners
         canvas.addEventListener('mousedown', handleStart);
         canvas.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleEnd);
@@ -244,4 +262,5 @@
 
     </script>
 </body>
+</html>
 </html>
