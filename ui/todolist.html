@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Todo - Minimal & Productive</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--primary), #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Input Area */
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--card-bg);
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            border-radius: calc(var(--radius) - 4px);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        button#add-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: calc(var(--radius) - 4px);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button#add-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Responsive Columns */
+        .task-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .task-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            background: var(--border);
+            color: var(--text-main);
+            padding: 0.1rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+        }
+
+        /* Task List Styles */
+        .task-list {
+            min-height: 100px;
+            background: rgba(226, 232, 240, 0.3);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            transition: background 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .task-list.drag-over {
+            background: rgba(99, 102, 241, 0.05);
+            border-color: var(--primary);
+        }
+
+        .task-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: calc(var(--radius) - 4px);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            cursor: grab;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .task-item:active {
+            cursor: grabbing;
+        }
+
+        .task-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+
+        .task-item:hover {
+            box-shadow: var(--shadow);
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 0.95rem;
+            word-break: break-word;
+        }
+
+        .completed .task-text {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .delete-btn:hover {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Empty state */
+        .empty-msg {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            padding: 2rem 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Vibe Todo</h1>
+            <p style="color: var(--text-muted)">Stay organized, stay chill.</p>
+        </header>
+
+        <div class="input-group">
+            <input type="text" id="task-input" placeholder="What needs to be done?" autocomplete="off">
+            <button id="add-btn">Add Task</button>
+        </div>
+
+        <div class="task-grid">
+            <!-- Active Tasks -->
+            <section>
+                <h2 class="section-title">
+                    Active Tasks 
+                    <span id="active-count" class="badge">0</span>
+                </h2>
+                <div id="active-list" class="task-list" data-status="active">
+                    <!-- Tasks injected here -->
+                </div>
+            </section>
+
+            <!-- Completed Tasks -->
+            <section>
+                <h2 class="section-title">
+                    Completed 
+                    <span id="completed-count" class="badge">0</span>
+                </h2>
+                <div id="completed-list" class="task-list" data-status="completed">
+                    <!-- Completed tasks injected here -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let tasks = JSON.parse(localStorage.getItem('vibe_tasks')) || [];
+
+        const input = document.getElementById('task-input');
+        const addBtn = document.getElementById('add-btn');
+        const activeList = document.getElementById('active-list');
+        const completedList = document.getElementById('completed-list');
+        const activeCount = document.getElementById('active-count');
+        const completedCount = document.getElementById('completed-count');
+
+        // --- Functions ---
+
+        function saveTasks() {
+            localStorage.setItem('vibe_tasks', JSON.stringify(tasks));
+            render();
+        }
+
+        function addTask() {
+            const text = input.value.trim();
+            if (!text) return;
+
+            const newTask = {
+                id: Date.now().toString(),
+                text: text,
+                completed: false
+            };
+
+            tasks.push(newTask);
+            input.value = '';
+            saveTasks();
+        }
+
+        function toggleTask(id) {
+            tasks = tasks.map(task => 
+                task.id === id ? { ...task, completed: !task.completed } : task
+            );
+            saveTasks();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(task => task.id !== id);
+            saveTasks();
+        }
+
+        function render() {
+            activeList.innerHTML = '';
+            completedList.innerHTML = '';
+
+            const activeTasks = tasks.filter(t => !t.completed);
+            const completedTasks = tasks.filter(t => t.completed);
+
+            activeCount.textContent = activeTasks.length;
+            completedCount.textContent = completedTasks.length;
+
+            if (activeTasks.length === 0) {
+                activeList.innerHTML = '<div class="empty-msg">No active tasks. Take a break!</div>';
+            } else {
+                activeTasks.forEach(task => activeList.appendChild(createTaskElement(task)));
+            }
+
+            if (completedTasks.length === 0) {
+                completedList.innerHTML = '<div class="empty-msg">Nothing completed yet.</div>';
+            } else {
+                completedTasks.forEach(task => completedList.appendChild(createTaskElement(task)));
+            }
+        }
+
+        function createTaskElement(task) {
+            const div = document.createElement('div');
+            div.className = `task-item ${task.completed ? 'completed' : ''}`;
+            div.draggable = true;
+            div.dataset.id = task.id;
+
+            div.innerHTML = `
+                <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}>
+                <span class="task-text">${task.text}</span>
+                <button class="delete-btn" title="Delete task">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                </button>
+            `;
+
+            // Event Listeners
+            div.querySelector('.task-checkbox').addEventListener('change', (e) => {
+                e.stopPropagation();
+                toggleTask(task.id);
+            });
+            div.querySelector('.delete-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteTask(task.id);
+            });
+            
+            // Drag and Drop Events
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragend', handleDragEnd);
+
+            return div;
+        }
+
+        // --- Enhanced Drag and Drop Logic ---
+        let draggedItemId = null;
+
+        function handleDragStart(e) {
+            draggedItemId = e.target.dataset.id;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedItemId);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.task-list').forEach(l => l.classList.remove('drag-over'));
+        }
+
+        // Helper to find the element after which the dragged item should be inserted
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        [activeList, completedList].forEach(list => {
+            list.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                list.classList.add('drag-over');
+                
+                // Visual feedback of where it will land (optional: could move ghost here)
+            });
+
+            list.addEventListener('dragleave', () => {
+                list.classList.remove('drag-over');
+            });
+
+            list.addEventListener('drop', (e) => {
+                e.preventDefault();
+                list.classList.remove('drag-over');
+                
+                const targetStatus = list.dataset.status;
+                const isCompleted = targetStatus === 'completed';
+                const afterElement = getDragAfterElement(list, e.clientY);
+                
+                // 1. Get the dragged task
+                const draggedTaskIndex = tasks.findIndex(t => t.id === draggedItemId);
+                if (draggedTaskIndex === -1) return;
+                
+                const draggedTask = tasks.splice(draggedTaskIndex, 1)[0];
+                
+                // 2. Update its completion status based on where it was dropped
+                draggedTask.completed = isCompleted;
+
+                // 3. Determine the new index in the master array
+                // We need to find the correct spot among other tasks of the SAME status
+                if (!afterElement) {
+                    // Drop at the end of this list
+                    tasks.push(draggedTask);
+                } else {
+                    // Find index of the element we are dropping before
+                    const afterId = afterElement.dataset.id;
+                    const afterIndex = tasks.findIndex(t => t.id === afterId);
+                    tasks.splice(afterIndex, 0, draggedTask);
+                }
+
+                saveTasks();
+            });
+        });
+
+        // --- Init ---
+        addBtn.addEventListener('click', addTask);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask();
+        });
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
