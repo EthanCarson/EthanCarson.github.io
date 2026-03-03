@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Perfect Circle Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            touch-action: none;
+            overflow: hidden;
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+            user-select: none;
+        }
+        #game-canvas {
+            cursor: crosshair;
+            touch-action: none;
+        }
+        .score-popup {
+            animation: slideUp 0.5s ease-out forwards;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen">
+
+    <div id="ui-overlay" class="absolute top-0 left-0 w-full p-6 flex justify-between items-start pointer-events-none">
+        <div class="bg-slate-800/80 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-700 pointer-events-auto">
+            <h1 class="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Circle Master</h1>
+            <p class="text-xs text-slate-400">Draw a perfect circle</p>
+        </div>
+        
+        <div class="bg-slate-800/80 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-700 text-right pointer-events-auto">
+            <p class="text-xs text-slate-400 uppercase tracking-widest">Personal Best</p>
+            <div id="high-score-display" class="text-2xl font-mono font-black text-yellow-400">0.0%</div>
+        </div>
+    </div>
+
+    <div id="result-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center score-popup">
+            <h2 id="result-title" class="text-3xl font-bold mb-2">Well Done!</h2>
+            <div id="result-score" class="text-6xl font-black text-cyan-400 my-4">0.0%</div>
+            <div class="space-y-2 mb-6">
+                <p id="result-time" class="text-slate-400 text-sm">Time: 1.2s</p>
+                <p id="result-feedback" class="text-slate-300 italic text-sm">Almost a master!</p>
+            </div>
+            <button onclick="resetGame()" class="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-cyan-500/20">
+                TRY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <script>
+        // --- State Management ---
+        const STORAGE_KEY = 'perfect_circle_personal_best';
+        let personalBest = parseFloat(localStorage.getItem(STORAGE_KEY)) || 0;
+        
+        // Update UI with initial best
+        document.getElementById('high-score-display').innerText = `${personalBest.toFixed(1)}%`;
+
+        // --- Game Setup ---
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const resultModal = document.getElementById('result-modal');
+        const resultScore = document.getElementById('result-score');
+        const resultTime = document.getElementById('result-time');
+        const resultTitle = document.getElementById('result-title');
+        const resultFeedback = document.getElementById('result-feedback');
+
+        let points = [];
+        let isDrawing = false;
+        let startTime = 0;
+        let drawingEnded = false;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            drawBackground();
+        }
+
+        function drawBackground() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw a subtle center point to guide the user
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- Input Handling ---
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function handleStart(e) {
+            if (drawingEnded) return;
+            isDrawing = true;
+            points = [];
+            startTime = performance.now();
+            
+            const pos = getPos(e);
+            points.push(pos);
+            
+            ctx.beginPath();
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#22d3ee';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function handleMove(e) {
+            if (!isDrawing || drawingEnded) return;
+            const pos = getPos(e);
+            points.push(pos);
+            
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        }
+
+        function handleEnd() {
+            if (!isDrawing || drawingEnded) return;
+            isDrawing = false;
+            
+            // Minimal points check to avoid accidental clicks
+            if (points.length < 15) {
+                resetGame();
+                return;
+            }
+
+            drawingEnded = true;
+            const duration = (performance.now() - startTime) / 1000;
+            calculateResult(duration);
+        }
+
+        // --- Logic & Scoring ---
+        function calculateResult(duration) {
+            // 1. Find the average center (centroid) of the drawn points
+            let sumX = 0, sumY = 0;
+            points.forEach(p => { sumX += p.x; sumY += p.y; });
+            const centerX = sumX / points.length;
+            const centerY = sumY / points.length;
+
+            // 2. Calculate average radius from that center
+            let totalRadius = 0;
+            const distances = points.map(p => {
+                const d = Math.sqrt(Math.pow(p.x - centerX, 2) + Math.pow(p.y - centerY, 2));
+                totalRadius += d;
+                return d;
+            });
+            const avgRadius = totalRadius / points.length;
+
+            // 3. Calculate Variance (Consistency)
+            let totalDeviation = 0;
+            distances.forEach(d => {
+                totalDeviation += Math.abs(d - avgRadius);
+            });
+            const avgDeviation = totalDeviation / points.length;
+            
+            // Accuracy: 100% minus the relative deviation
+            // We multiply the deviation slightly to make getting 100% truly difficult
+            let accuracy = Math.max(0, 100 * (1 - (avgDeviation / avgRadius * 1.5)));
+            
+            // Check if the shape is closed (distance between start and end)
+            const start = points[0];
+            const end = points[points.length - 1];
+            const gap = Math.sqrt(Math.pow(start.x - end.x, 2) + Math.pow(start.y - end.y, 2));
+            const closurePenalty = Math.max(0, (gap / avgRadius) * 20); // Penalty if circle isn't closed
+            
+            accuracy = Math.max(0, accuracy - closurePenalty);
+
+            // Handle High Score
+            if (accuracy > personalBest) {
+                personalBest = accuracy;
+                localStorage.setItem(STORAGE_KEY, personalBest);
+                document.getElementById('high-score-display').innerText = `${personalBest.toFixed(1)}%`;
+            }
+
+            showModal(accuracy, duration, centerX, centerY, avgRadius);
+        }
+
+        function showModal(score, time, cx, cy, r) {
+            // Visual feedback: Draw the "perfect" version of their circle
+            ctx.setLineDash([10, 10]);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            resultScore.innerText = `${score.toFixed(1)}%`;
+            resultTime.innerText = `Time: ${time.toFixed(2)}s`;
+            
+            if (score > 95) {
+                resultTitle.innerText = "MASTERPIECE!";
+                resultTitle.style.color = "#fbbf24";
+                resultFeedback.innerText = "You have the hands of a surgeon.";
+            } else if (score > 85) {
+                resultTitle.innerText = "Great Circle!";
+                resultTitle.style.color = "#22d3ee";
+                resultFeedback.innerText = "Very consistent stroke.";
+            } else if (score > 70) {
+                resultTitle.innerText = "Not Bad";
+                resultTitle.style.color = "#10b981";
+                resultFeedback.innerText = "Keep working on that curve.";
+            } else {
+                resultTitle.innerText = "Try Again";
+                resultTitle.style.color = "#94a3b8";
+                resultFeedback.innerText = "That... is not a circle.";
+            }
+
+            resultModal.classList.remove('hidden');
+        }
+
+        window.resetGame = function() {
+            points = [];
+            isDrawing = false;
+            drawingEnded = false;
+            resultModal.classList.add('hidden');
+            drawBackground();
+        };
+
+        // Event Listeners
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, {passive: false});
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
+        window.addEventListener('touchend', handleEnd);
+
+    </script>
+</body>
+</html>
