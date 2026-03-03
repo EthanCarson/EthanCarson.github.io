@@ -254,8 +254,12 @@
     </div>
 
     <script>
+        // --- Configuration ---
+        const PROJECT_ID = 1;
+        const STORAGE_KEY = 'vibe_tasks_v2';
+
         // --- State Management ---
-        let tasks = JSON.parse(localStorage.getItem('vibe_tasks')) || [];
+        let tasks = loadTasksFromStorage();
 
         const input = document.getElementById('task-input');
         const addBtn = document.getElementById('add-btn');
@@ -266,8 +270,39 @@
 
         // --- Functions ---
 
+        /**
+         * Loads tasks and validates the Project ID
+         */
+        function loadTasksFromStorage() {
+            try {
+                const storedValue = localStorage.getItem(STORAGE_KEY);
+                if (!storedValue) return [];
+
+                const parsed = JSON.parse(storedValue);
+                
+                // Only return data if the PROJECT_ID matches
+                if (parsed && parsed.PROJECT_ID === PROJECT_ID) {
+                    return Array.isArray(parsed.data) ? parsed.data : [];
+                }
+                
+                // If ID doesn't match, treat as empty to avoid conflicts
+                return [];
+            } catch (e) {
+                console.error("Failed to load tasks:", e);
+                return [];
+            }
+        }
+
+        /**
+         * Saves tasks with the Project ID wrapper
+         */
         function saveTasks() {
-            localStorage.setItem('vibe_tasks', JSON.stringify(tasks));
+            const storageObject = {
+                PROJECT_ID: PROJECT_ID,
+                data: tasks,
+                updatedAt: new Date().toISOString()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(storageObject));
             render();
         }
 
@@ -367,7 +402,6 @@
             document.querySelectorAll('.task-list').forEach(l => l.classList.remove('drag-over'));
         }
 
-        // Helper to find the element after which the dragged item should be inserted
         function getDragAfterElement(container, y) {
             const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
 
@@ -386,8 +420,6 @@
             list.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 list.classList.add('drag-over');
-                
-                // Visual feedback of where it will land (optional: could move ghost here)
             });
 
             list.addEventListener('dragleave', () => {
@@ -402,22 +434,15 @@
                 const isCompleted = targetStatus === 'completed';
                 const afterElement = getDragAfterElement(list, e.clientY);
                 
-                // 1. Get the dragged task
                 const draggedTaskIndex = tasks.findIndex(t => t.id === draggedItemId);
                 if (draggedTaskIndex === -1) return;
                 
                 const draggedTask = tasks.splice(draggedTaskIndex, 1)[0];
-                
-                // 2. Update its completion status based on where it was dropped
                 draggedTask.completed = isCompleted;
 
-                // 3. Determine the new index in the master array
-                // We need to find the correct spot among other tasks of the SAME status
                 if (!afterElement) {
-                    // Drop at the end of this list
                     tasks.push(draggedTask);
                 } else {
-                    // Find index of the element we are dropping before
                     const afterId = afterElement.dataset.id;
                     const afterIndex = tasks.findIndex(t => t.id === afterId);
                     tasks.splice(afterIndex, 0, draggedTask);
