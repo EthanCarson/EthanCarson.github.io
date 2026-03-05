@@ -88,28 +88,18 @@
                     <div class="h-3 w-full shimmer-animation rounded"></div>
                 </div>
             </div>
-            <!-- Repeated skeletons for visual balance -->
-            <div class="hidden md:block bg-white rounded-3xl p-8 border border-slate-100">
-                <div class="w-24 h-24 rounded-2xl shimmer-animation mx-auto mb-6"></div>
-                <div class="h-6 w-3/4 shimmer-animation mx-auto mb-3 rounded-lg"></div>
-                <div class="h-4 w-1/2 shimmer-animation mx-auto mb-8 rounded-lg"></div>
-                <div class="space-y-4 pt-6 border-t border-slate-50">
-                    <div class="h-3 w-full shimmer-animation rounded"></div>
-                    <div class="h-3 w-full shimmer-animation rounded"></div>
-                </div>
-            </div>
         </div>
     </main>
 
     <script>
         /**
          * The IdentityCardApplication manages state and rendering for employee identification cards.
-         * It interacts with a JSON endpoint returning objects with id, fullName, email, phone, 
-         * jobTitle, company, and location.
+         * Requirements: Takes data from endpoint, turns rows into cards, single file, 
+         * vanilla JS, no abbreviations, dynamic screen size.
          */
         
         const applicationState = {
-            dataSourceUrl: "https://script.google.com/macros/s/AKfycbyiwTWDa3r7g9Xb84rUKAXoWTI1UiC-oq-qWezhTPzkORGk3RqdZ2F0bavc2sdz1LSFsA/exec", // Insert your Google Apps Script URL here
+            dataSourceUrl: "https://script.google.com/macros/s/AKfycbyiwTWDa3r7g9Xb84rUKAXoWTI1UiC-oq-qWezhTPzkORGk3RqdZ2F0bavc2sdz1LSFsA/exec",
             identities: [],
             isFetchingData: false
         };
@@ -143,10 +133,9 @@
             domElements.feedbackTitle.textContent = title;
             domElements.feedbackDescription.textContent = description;
             
-            // Auto-hide feedback after a delay
             setTimeout(() => {
                 domElements.feedbackBox.classList.add('hidden');
-            }, 5000);
+            }, 6000);
         }
 
         /**
@@ -162,7 +151,6 @@
                 'from-cyan-500 to-blue-600'
             ];
             
-            // Use character codes to pick a stable index
             let characterSum = 0;
             for (let index = 0; index < seedName.length; index++) {
                 characterSum += seedName.charCodeAt(index);
@@ -185,22 +173,20 @@
          * Creates the HTML structure for a single identity card.
          */
         function createIdentityCardHtml(individual) {
-            const avatarGradient = generateAvatarStyle(individual.fullName);
-            const initials = getInitials(individual.fullName);
+            const avatarGradient = generateAvatarStyle(individual.fullName || "Unknown User");
+            const initials = getInitials(individual.fullName || "U");
 
             return `
                 <div class="identity-card bg-white rounded-3xl border border-slate-100 overflow-hidden flex flex-col group h-full">
-                    <!-- Top Visual Header -->
                     <div class="h-32 bg-slate-50 relative flex justify-center items-end pb-0 overflow-visible">
                         <div class="absolute top-4 right-4 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/50 shadow-sm">
-                            <span class="text-[10px] font-black text-slate-400 tracking-tighter uppercase">Member #${individual.id}</span>
+                            <span class="text-[10px] font-black text-slate-400 tracking-tighter uppercase">ID: ${individual.id}</span>
                         </div>
                         <div class="translate-y-1/2 w-24 h-24 rounded-3xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-indigo-100 ring-8 ring-white">
                             ${initials}
                         </div>
                     </div>
 
-                    <!-- Card Body Content -->
                     <div class="px-8 pt-16 pb-8 text-center flex-grow flex flex-col">
                         <h3 class="text-xl font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">${individual.fullName}</h3>
                         <p class="text-indigo-600 font-semibold text-sm mb-6">${individual.jobTitle}</p>
@@ -227,7 +213,6 @@
                         </div>
                     </div>
                     
-                    <!-- Quick Actions Footer -->
                     <div class="bg-slate-50 px-8 py-4 border-t border-slate-100 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <span class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">${individual.phone}</span>
                         <button class="text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:text-indigo-800 transition-colors">Details</button>
@@ -240,42 +225,58 @@
          * Renders all identity objects into the grid.
          */
         function renderIdentityGrid(identitiesArray) {
+            console.group("Grid Rendering Process");
+            console.log(`Starting render for ${identitiesArray.length} items.`);
+            
             domElements.gridContainer.innerHTML = '';
             
             if (identitiesArray.length === 0) {
+                console.warn("No data provided to the renderer.");
                 domElements.gridContainer.innerHTML = `
                     <div class="col-span-full py-24 text-center">
                         <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
                             <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
                         </div>
-                        <h2 class="text-2xl font-bold text-slate-800 mb-2">No records to display</h2>
-                        <p class="text-slate-500 max-w-sm mx-auto">Sync data to load the latest identification cards from the directory service.</p>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-2">No records found</h2>
+                        <p class="text-slate-500 max-w-sm mx-auto">Click 'Sync Data' to fetch identification cards from the directory.</p>
                     </div>
                 `;
+                console.groupEnd();
                 return;
             }
 
-            identitiesArray.forEach(individual => {
-                const cardContainerElement = document.createElement('div');
-                cardContainerElement.innerHTML = createIdentityCardHtml(individual);
-                domElements.gridContainer.appendChild(cardContainerElement.firstElementChild);
+            identitiesArray.forEach((individual, index) => {
+                try {
+                    const cardContainerElement = document.createElement('div');
+                    cardContainerElement.innerHTML = createIdentityCardHtml(individual);
+                    domElements.gridContainer.appendChild(cardContainerElement.firstElementChild);
+                } catch (renderingError) {
+                    console.error(`Error rendering individual at index ${index}:`, renderingError);
+                }
             });
 
             domElements.recordCounter.textContent = identitiesArray.length;
             domElements.dataBadge.classList.remove('hidden');
+            console.log("Grid rendering completed successfully.");
+            console.groupEnd();
         }
 
         /**
-         * Orchestrates the fetching process from the endpoint.
+         * Orchestrates the fetching process from the endpoint with robust error handling and detailed logs.
          */
         async function fetchIdentitiesFromEndpoint() {
-            if (applicationState.isFetchingData) return;
+            if (applicationState.isFetchingData) {
+                console.warn("Fetch process already in progress. Ignoring request.");
+                return;
+            }
+
+            console.group("Data Synchronization Lifecycle");
+            console.log("Initializing sync request...");
+            
             if (!applicationState.dataSourceUrl) {
-                displayApplicationFeedback(
-                    "Configuration Missing", 
-                    "Please provide a valid data source URL in the application logic.", 
-                    "error"
-                );
+                console.error("Configuration Error: dataSourceUrl is not defined.");
+                displayApplicationFeedback("Config Error", "Data source URL is missing.", "error");
+                console.groupEnd();
                 return;
             }
 
@@ -284,44 +285,67 @@
             domElements.buttonIcon.classList.add('animate-spin');
             
             try {
+                console.log(`Connecting to: ${applicationState.dataSourceUrl}`);
                 const networkResponse = await fetch(applicationState.dataSourceUrl);
                 
+                console.log(`Response received. HTTP Status: ${networkResponse.status} (${networkResponse.statusText})`);
+                
                 if (!networkResponse.ok) {
-                    throw new Error(`Endpoint connection failed with status: ${networkResponse.status}`);
+                    throw new Error(`Endpoint returned error status: ${networkResponse.status}`);
                 }
                 
+                console.log("Extracting JSON payload...");
                 const receivedData = await networkResponse.json();
                 
-                // Assuming the structure is an array of objects
-                applicationState.identities = Array.isArray(receivedData) ? receivedData : (receivedData.data || []);
+                console.log("Data successfully parsed. Validating structure...");
+                
+                // Flexible structure handling: support raw array or wrapped in { data: [] }
+                const extractedIdentities = Array.isArray(receivedData) ? receivedData : (receivedData.data || []);
+                
+                if (!Array.isArray(extractedIdentities)) {
+                    throw new Error("Invalid data format: Expected an array of records.");
+                }
+
+                console.log(`Validation complete. Found ${extractedIdentities.length} valid records.`);
+                applicationState.identities = extractedIdentities;
                 
                 renderIdentityGrid(applicationState.identities);
+                
                 displayApplicationFeedback(
-                    "Sync Successful", 
-                    `Successfully imported ${applicationState.identities.length} identity records.`, 
+                    "Sync Complete", 
+                    `Imported ${applicationState.identities.length} identification records.`, 
                     "success"
                 );
-            } catch (networkError) {
-                console.error("Critical Application Error:", networkError);
+                
+            } catch (applicationError) {
+                console.group("Synchronization Error Details");
+                console.error("Type:", applicationError.name);
+                console.error("Message:", applicationError.message);
+                console.error("Stack Trace:", applicationError.stack);
+                console.groupEnd();
+                
                 displayApplicationFeedback(
-                    "Sync Failed", 
-                    "Unable to reach the identification server. Check your connection or URL.", 
+                    "Connection Failed", 
+                    "An error occurred while synchronizing data. Check the console for details.", 
                     "error"
                 );
             } finally {
                 applicationState.isFetchingData = false;
                 domElements.syncButton.disabled = false;
                 domElements.buttonIcon.classList.remove('animate-spin');
+                console.log("Synchronization lifecycle finished.");
+                console.groupEnd();
             }
         }
 
-        // Event Listeners
-        domElements.syncButton.addEventListener('click', fetchIdentitiesFromEndpoint);
-
-        // Initialization - show empty state initially
+        // Initialize empty state
         window.addEventListener('DOMContentLoaded', () => {
+            console.log("Identity Management Portal initialized.");
             renderIdentityGrid([]);
         });
+
+        // Attach main action listener
+        domElements.syncButton.addEventListener('click', fetchIdentitiesFromEndpoint);
     </script>
 </body>
 </html>
