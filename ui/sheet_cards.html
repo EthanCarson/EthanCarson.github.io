@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,6 +34,17 @@
 </head>
 <body class="min-h-screen">
 
+    <!-- Global Error Toast (Hidden by default) -->
+    <div id="criticalErrorContainer" class="fixed bottom-6 right-6 z-[100] hidden">
+        <div class="bg-red-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <div>
+                <p class="font-bold text-sm">System Exception Detected</p>
+                <p id="criticalErrorMessage" class="text-xs opacity-90">Check console for full trace.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Navigation Bar -->
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,11 +66,11 @@
                         <span class="mx-2 text-slate-300">|</span>
                         <span class="text-xs font-semibold text-slate-500 uppercase">Records Loaded</span>
                     </div>
-                    <button id="fetchDataButton" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 active:scale-95">
+                    <button id="fetchDataButton" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg id="buttonIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                         </svg>
-                        <span>Sync Data</span>
+                        <span id="buttonText">Sync Data</span>
                     </button>
                 </div>
             </div>
@@ -78,8 +90,8 @@
 
         <!-- ID Card Grid -->
         <div id="cardDisplayGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <!-- Initial Loading Placeholder Skeletons -->
-            <div class="bg-white rounded-3xl p-8 border border-slate-100">
+            <!-- Loading Skeletons - visible during initial load -->
+            <div id="initialLoadingPlaceholder" class="bg-white rounded-3xl p-8 border border-slate-100">
                 <div class="w-24 h-24 rounded-2xl shimmer-animation mx-auto mb-6"></div>
                 <div class="h-6 w-3/4 shimmer-animation mx-auto mb-3 rounded-lg"></div>
                 <div class="h-4 w-1/2 shimmer-animation mx-auto mb-8 rounded-lg"></div>
@@ -94,8 +106,6 @@
     <script>
         /**
          * The IdentityCardApplication manages state and rendering for employee identification cards.
-         * Requirements: Takes data from endpoint, turns rows into cards, single file, 
-         * vanilla JS, no abbreviations, dynamic screen size.
          */
         
         const applicationState = {
@@ -107,18 +117,26 @@
         const domElements = {
             gridContainer: document.getElementById('cardDisplayGrid'),
             syncButton: document.getElementById('fetchDataButton'),
+            buttonText: document.getElementById('buttonText'),
             buttonIcon: document.getElementById('buttonIcon'),
             recordCounter: document.getElementById('recordCount'),
             dataBadge: document.getElementById('dataBadge'),
             feedbackBox: document.getElementById('applicationFeedback'),
             feedbackTitle: document.getElementById('feedbackTitle'),
             feedbackDescription: document.getElementById('feedbackDescription'),
-            feedbackIcon: document.getElementById('feedbackIconContainer')
+            feedbackIcon: document.getElementById('feedbackIconContainer'),
+            criticalErrorBox: document.getElementById('criticalErrorContainer'),
+            criticalErrorMessage: document.getElementById('criticalErrorMessage')
         };
 
-        /**
-         * Updates the UI to show success, error, or loading states.
-         */
+        // Global Error Listener to catch "Something Else"
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error("GLOBAL EXCEPTION CAPTURED:", { message, source, lineno, colno, error });
+            domElements.criticalErrorBox.classList.remove('hidden');
+            domElements.criticalErrorMessage.textContent = message;
+            return false;
+        };
+
         function displayApplicationFeedback(title, description, type) {
             domElements.feedbackBox.classList.remove('hidden', 'bg-red-50', 'border-red-100', 'text-red-800', 'bg-green-50', 'border-green-100', 'text-green-800', 'bg-blue-50', 'border-blue-100', 'text-blue-800');
             
@@ -132,52 +150,26 @@
 
             domElements.feedbackTitle.textContent = title;
             domElements.feedbackDescription.textContent = description;
-            
-            setTimeout(() => {
-                domElements.feedbackBox.classList.add('hidden');
-            }, 6000);
         }
 
-        /**
-         * Generates a unique color gradient based on a string (like a name).
-         */
         function generateAvatarStyle(seedName) {
-            const backgroundColors = [
-                'from-indigo-500 to-blue-600',
-                'from-purple-500 to-pink-600',
-                'from-emerald-500 to-teal-600',
-                'from-amber-500 to-orange-600',
-                'from-rose-500 to-red-600',
-                'from-cyan-500 to-blue-600'
-            ];
-            
+            const backgroundColors = ['from-indigo-500 to-blue-600', 'from-purple-500 to-pink-600', 'from-emerald-500 to-teal-600', 'from-amber-500 to-orange-600', 'from-rose-500 to-red-600', 'from-cyan-500 to-blue-600'];
             let characterSum = 0;
-            for (let index = 0; index < seedName.length; index++) {
-                characterSum += seedName.charCodeAt(index);
-            }
+            for (let index = 0; index < seedName.length; index++) characterSum += seedName.charCodeAt(index);
             return backgroundColors[characterSum % backgroundColors.length];
         }
 
-        /**
-         * Extracts initials from a full name.
-         */
         function getInitials(fullName) {
             const nameParts = fullName.trim().split(/\s+/);
-            if (nameParts.length >= 2) {
-                return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
-            }
+            if (nameParts.length >= 2) return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
             return (nameParts[0][0] || '?').toUpperCase();
         }
 
-        /**
-         * Creates the HTML structure for a single identity card.
-         */
         function createIdentityCardHtml(individual) {
-            const avatarGradient = generateAvatarStyle(individual.fullName || "Unknown User");
+            const avatarGradient = generateAvatarStyle(individual.fullName || "User");
             const initials = getInitials(individual.fullName || "U");
-
             return `
-                <div class="identity-card bg-white rounded-3xl border border-slate-100 overflow-hidden flex flex-col group h-full">
+                <div class="identity-card bg-white rounded-3xl border border-slate-100 overflow-hidden flex flex-col group h-full shadow-sm">
                     <div class="h-32 bg-slate-50 relative flex justify-center items-end pb-0 overflow-visible">
                         <div class="absolute top-4 right-4 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/50 shadow-sm">
                             <span class="text-[10px] font-black text-slate-400 tracking-tighter uppercase">ID: ${individual.id}</span>
@@ -186,165 +178,97 @@
                             ${initials}
                         </div>
                     </div>
-
                     <div class="px-8 pt-16 pb-8 text-center flex-grow flex flex-col">
-                        <h3 class="text-xl font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">${individual.fullName}</h3>
-                        <p class="text-indigo-600 font-semibold text-sm mb-6">${individual.jobTitle}</p>
-                        
+                        <h3 class="text-xl font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">${individual.fullName || "Unnamed Record"}</h3>
+                        <p class="text-indigo-600 font-semibold text-sm mb-6">${individual.jobTitle || "No Title"}</p>
                         <div class="space-y-4 text-left border-t border-slate-50 pt-6 mt-auto">
-                            <div class="flex items-center gap-3">
-                                <div class="p-2 bg-slate-50 rounded-lg text-slate-400">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                                </div>
-                                <span class="text-xs font-medium text-slate-600 truncate">${individual.company}</span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <div class="p-2 bg-slate-50 rounded-lg text-slate-400">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                </div>
-                                <span class="text-xs font-medium text-slate-600 truncate">${individual.email}</span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <div class="p-2 bg-slate-50 rounded-lg text-slate-400">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                </div>
-                                <span class="text-xs font-medium text-slate-600 truncate">${individual.location}</span>
-                            </div>
+                            <div class="flex items-center gap-3"><div class="p-2 bg-slate-50 rounded-lg text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg></div><span class="text-xs font-medium text-slate-600 truncate">${individual.company || "N/A"}</span></div>
+                            <div class="flex items-center gap-3"><div class="p-2 bg-slate-50 rounded-lg text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></div><span class="text-xs font-medium text-slate-600 truncate">${individual.email || "N/A"}</span></div>
+                            <div class="flex items-center gap-3"><div class="p-2 bg-slate-50 rounded-lg text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div><span class="text-xs font-medium text-slate-600 truncate">${individual.location || "N/A"}</span></div>
                         </div>
-                    </div>
-                    
-                    <div class="bg-slate-50 px-8 py-4 border-t border-slate-100 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">${individual.phone}</span>
-                        <button class="text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:text-indigo-800 transition-colors">Details</button>
                     </div>
                 </div>
             `;
         }
 
-        /**
-         * Renders all identity objects into the grid.
-         */
         function renderIdentityGrid(identitiesArray) {
-            console.group("Grid Rendering Process");
-            console.log(`Starting render for ${identitiesArray.length} items.`);
-            
+            console.group("Render Logic");
+            console.log(`Rendering ${identitiesArray.length} items to grid.`);
             domElements.gridContainer.innerHTML = '';
             
             if (identitiesArray.length === 0) {
-                console.warn("No data provided to the renderer.");
                 domElements.gridContainer.innerHTML = `
                     <div class="col-span-full py-24 text-center">
-                        <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-800 mb-2">No records found</h2>
-                        <p class="text-slate-500 max-w-sm mx-auto">Click 'Sync Data' to fetch identification cards from the directory.</p>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-2">Empty Records</h2>
+                        <p class="text-slate-500">The server returned successfully but with zero rows.</p>
                     </div>
                 `;
-                console.groupEnd();
-                return;
+            } else {
+                identitiesArray.forEach(individual => {
+                    const cardWrapper = document.createElement('div');
+                    cardWrapper.innerHTML = createIdentityCardHtml(individual);
+                    domElements.gridContainer.appendChild(cardWrapper.firstElementChild);
+                });
+                domElements.recordCounter.textContent = identitiesArray.length;
+                domElements.dataBadge.classList.remove('hidden');
             }
-
-            identitiesArray.forEach((individual, index) => {
-                try {
-                    const cardContainerElement = document.createElement('div');
-                    cardContainerElement.innerHTML = createIdentityCardHtml(individual);
-                    domElements.gridContainer.appendChild(cardContainerElement.firstElementChild);
-                } catch (renderingError) {
-                    console.error(`Error rendering individual at index ${index}:`, renderingError);
-                }
-            });
-
-            domElements.recordCounter.textContent = identitiesArray.length;
-            domElements.dataBadge.classList.remove('hidden');
-            console.log("Grid rendering completed successfully.");
             console.groupEnd();
         }
 
-        /**
-         * Orchestrates the fetching process from the endpoint with robust error handling and detailed logs.
-         */
         async function fetchIdentitiesFromEndpoint() {
-            if (applicationState.isFetchingData) {
-                console.warn("Fetch process already in progress. Ignoring request.");
-                return;
-            }
+            if (applicationState.isFetchingData) return;
 
-            console.group("Data Synchronization Lifecycle");
-            console.log("Initializing sync request...");
+            console.group("Sync Lifecycle");
+            console.log("Stage 1: Updating UI to Loading State");
             
-            if (!applicationState.dataSourceUrl) {
-                console.error("Configuration Error: dataSourceUrl is not defined.");
-                displayApplicationFeedback("Config Error", "Data source URL is missing.", "error");
-                console.groupEnd();
-                return;
-            }
-
             applicationState.isFetchingData = true;
             domElements.syncButton.disabled = true;
+            domElements.buttonText.textContent = "Connecting...";
             domElements.buttonIcon.classList.add('animate-spin');
             
             try {
-                console.log(`Connecting to: ${applicationState.dataSourceUrl}`);
-                const networkResponse = await fetch(applicationState.dataSourceUrl);
+                console.log(`Stage 2: Fetching from ${applicationState.dataSourceUrl}`);
                 
-                console.log(`Response received. HTTP Status: ${networkResponse.status} (${networkResponse.statusText})`);
+                // Explicitly handling redirects which is common with Google Apps Scripts
+                const networkResponse = await fetch(applicationState.dataSourceUrl, {
+                    method: 'GET',
+                    redirect: 'follow',
+                    headers: { 'Accept': 'application/json' }
+                });
                 
-                if (!networkResponse.ok) {
-                    throw new Error(`Endpoint returned error status: ${networkResponse.status}`);
-                }
+                console.log(`Stage 3: Response Code ${networkResponse.status}`);
                 
-                console.log("Extracting JSON payload...");
-                const receivedData = await networkResponse.json();
+                if (!networkResponse.ok) throw new Error(`HTTP ${networkResponse.status}: ${networkResponse.statusText}`);
                 
-                console.log("Data successfully parsed. Validating structure...");
+                console.log("Stage 4: Parsing JSON Content");
+                const rawJsonContent = await networkResponse.json();
                 
-                // Flexible structure handling: support raw array or wrapped in { data: [] }
-                const extractedIdentities = Array.isArray(receivedData) ? receivedData : (receivedData.data || []);
+                console.log("Stage 5: Data Structural Validation");
+                const finalIdentities = Array.isArray(rawJsonContent) ? rawJsonContent : (rawJsonContent.data || []);
                 
-                if (!Array.isArray(extractedIdentities)) {
-                    throw new Error("Invalid data format: Expected an array of records.");
-                }
-
-                console.log(`Validation complete. Found ${extractedIdentities.length} valid records.`);
-                applicationState.identities = extractedIdentities;
-                
+                applicationState.identities = finalIdentities;
                 renderIdentityGrid(applicationState.identities);
                 
-                displayApplicationFeedback(
-                    "Sync Complete", 
-                    `Imported ${applicationState.identities.length} identification records.`, 
-                    "success"
-                );
-                
-            } catch (applicationError) {
-                console.group("Synchronization Error Details");
-                console.error("Type:", applicationError.name);
-                console.error("Message:", applicationError.message);
-                console.error("Stack Trace:", applicationError.stack);
-                console.groupEnd();
-                
-                displayApplicationFeedback(
-                    "Connection Failed", 
-                    "An error occurred while synchronizing data. Check the console for details.", 
-                    "error"
-                );
+                displayApplicationFeedback("Success", `Loaded ${finalIdentities.length} records.`, "success");
+                console.log("Stage 6: Process Complete");
+            } catch (networkError) {
+                console.error("CRITICAL SYNC FAILURE:", networkError);
+                displayApplicationFeedback("Connection Failed", networkError.message, "error");
             } finally {
                 applicationState.isFetchingData = false;
                 domElements.syncButton.disabled = false;
+                domElements.buttonText.textContent = "Sync Data";
                 domElements.buttonIcon.classList.remove('animate-spin');
-                console.log("Synchronization lifecycle finished.");
                 console.groupEnd();
             }
         }
 
-        // Initialize empty state
+        // AUTO-INIT on load
         window.addEventListener('DOMContentLoaded', () => {
-            console.log("Identity Management Portal initialized.");
-            renderIdentityGrid([]);
+            console.log("Portal Initialized. Triggering automatic data sync...");
+            fetchIdentitiesFromEndpoint();
         });
 
-        // Attach main action listener
         domElements.syncButton.addEventListener('click', fetchIdentitiesFromEndpoint);
     </script>
 </body>
