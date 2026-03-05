@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity Management Portal</title>
+    <!-- Tailwind CSS for modern, responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for professional typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f1f5f9;
+        }
+        .identity-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .identity-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .shimmer-animation {
+            background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: shimmerEffect 2s infinite linear;
+        }
+        @keyframes shimmerEffect {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Main Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-200">
+                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">VibeID Portal</h1>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-widest">Employee Directory</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="dataBadge" class="hidden sm:flex items-center px-4 py-2 bg-slate-50 rounded-full border border-slate-100">
+                        <span id="recordCount" class="text-sm font-bold text-slate-700">0</span>
+                        <span class="mx-2 text-slate-300">|</span>
+                        <span class="text-xs font-semibold text-slate-500 uppercase">Records Loaded</span>
+                    </div>
+                    <button id="fetchDataButton" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 active:scale-95">
+                        <svg id="buttonIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        <span>Sync Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        
+        <!-- Interactive Feedback Section -->
+        <div id="applicationFeedback" class="hidden mb-8 p-5 rounded-2xl border flex items-center gap-4 animate-in fade-in duration-500">
+            <div id="feedbackIconContainer" class="p-2 rounded-full"></div>
+            <div>
+                <h4 id="feedbackTitle" class="font-bold"></h4>
+                <p id="feedbackDescription" class="text-sm opacity-90"></p>
+            </div>
+        </div>
+
+        <!-- ID Card Grid -->
+        <div id="cardDisplayGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <!-- Initial Loading Placeholder Skeletons -->
+            <div class="bg-white rounded-3xl p-8 border border-slate-100">
+                <div class="w-24 h-24 rounded-2xl shimmer-animation mx-auto mb-6"></div>
+                <div class="h-6 w-3/4 shimmer-animation mx-auto mb-3 rounded-lg"></div>
+                <div class="h-4 w-1/2 shimmer-animation mx-auto mb-8 rounded-lg"></div>
+                <div class="space-y-4 pt-6 border-t border-slate-50">
+                    <div class="h-3 w-full shimmer-animation rounded"></div>
+                    <div class="h-3 w-full shimmer-animation rounded"></div>
+                </div>
+            </div>
+            <!-- Repeated skeletons for visual balance -->
+            <div class="hidden md:block bg-white rounded-3xl p-8 border border-slate-100">
+                <div class="w-24 h-24 rounded-2xl shimmer-animation mx-auto mb-6"></div>
+                <div class="h-6 w-3/4 shimmer-animation mx-auto mb-3 rounded-lg"></div>
+                <div class="h-4 w-1/2 shimmer-animation mx-auto mb-8 rounded-lg"></div>
+                <div class="space-y-4 pt-6 border-t border-slate-50">
+                    <div class="h-3 w-full shimmer-animation rounded"></div>
+                    <div class="h-3 w-full shimmer-animation rounded"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        /**
+         * The IdentityCardApplication manages state and rendering for employee identification cards.
+         * It interacts with a JSON endpoint returning objects with id, fullName, email, phone, 
+         * jobTitle, company, and location.
+         */
+        
+        const applicationState = {
+            dataSourceUrl: "https://script.google.com/macros/s/AKfycbyiwTWDa3r7g9Xb84rUKAXoWTI1UiC-oq-qWezhTPzkORGk3RqdZ2F0bavc2sdz1LSFsA/exec", // Insert your Google Apps Script URL here
+            identities: [],
+            isFetchingData: false
+        };
+
+        const domElements = {
+            gridContainer: document.getElementById('cardDisplayGrid'),
+            syncButton: document.getElementById('fetchDataButton'),
+            buttonIcon: document.getElementById('buttonIcon'),
+            recordCounter: document.getElementById('recordCount'),
+            dataBadge: document.getElementById('dataBadge'),
+            feedbackBox: document.getElementById('applicationFeedback'),
+            feedbackTitle: document.getElementById('feedbackTitle'),
+            feedbackDescription: document.getElementById('feedbackDescription'),
+            feedbackIcon: document.getElementById('feedbackIconContainer')
+        };
+
+        /**
+         * Updates the UI to show success, error, or loading states.
+         */
+        function displayApplicationFeedback(title, description, type) {
+            domElements.feedbackBox.classList.remove('hidden', 'bg-red-50', 'border-red-100', 'text-red-800', 'bg-green-50', 'border-green-100', 'text-green-800', 'bg-blue-50', 'border-blue-100', 'text-blue-800');
+            
+            if (type === 'error') {
+                domElements.feedbackBox.classList.add('bg-red-50', 'border-red-100', 'text-red-800');
+                domElements.feedbackIcon.innerHTML = `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>`;
+            } else if (type === 'success') {
+                domElements.feedbackBox.classList.add('bg-green-50', 'border-green-100', 'text-green-800');
+                domElements.feedbackIcon.innerHTML = `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>`;
+            }
+
+            domElements.feedbackTitle.textContent = title;
+            domElements.feedbackDescription.textContent = description;
+            
+            // Auto-hide feedback after a delay
+            setTimeout(() => {
+                domElements.feedbackBox.classList.add('hidden');
+            }, 5000);
+        }
+
+        /**
+         * Generates a unique color gradient based on a string (like a name).
+         */
+        function generateAvatarStyle(seedName) {
+            const backgroundColors = [
+                'from-indigo-500 to-blue-600',
+                'from-purple-500 to-pink-600',
+                'from-emerald-500 to-teal-600',
+                'from-amber-500 to-orange-600',
+                'from-rose-500 to-red-600',
+                'from-cyan-500 to-blue-600'
+            ];
+            
+            // Use character codes to pick a stable index
+            let characterSum = 0;
+            for (let index = 0; index < seedName.length; index++) {
+                characterSum += seedName.charCodeAt(index);
+            }
+            return backgroundColors[characterSum % backgroundColors.length];
+        }
+
+        /**
+         * Extracts initials from a full name.
+         */
+        function getInitials(fullName) {
+            const nameParts = fullName.trim().split(/\s+/);
+            if (nameParts.length >= 2) {
+                return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+            }
+            return (nameParts[0][0] || '?').toUpperCase();
+        }
+
+        /**
+         * Creates the HTML structure for a single identity card.
+         */
+        function createIdentityCardHtml(individual) {
+            const avatarGradient = generateAvatarStyle(individual.fullName);
+            const initials = getInitials(individual.fullName);
+
+            return `
+                <div class="identity-card bg-white rounded-3xl border border-slate-100 overflow-hidden flex flex-col group h-full">
+                    <!-- Top Visual Header -->
+                    <div class="h-32 bg-slate-50 relative flex justify-center items-end pb-0 overflow-visible">
+                        <div class="absolute top-4 right-4 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/50 shadow-sm">
+                            <span class="text-[10px] font-black text-slate-400 tracking-tighter uppercase">Member #${individual.id}</span>
+                        </div>
+                        <div class="translate-y-1/2 w-24 h-24 rounded-3xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-indigo-100 ring-8 ring-white">
+                            ${initials}
+                        </div>
+                    </div>
+
+                    <!-- Card Body Content -->
+                    <div class="px-8 pt-16 pb-8 text-center flex-grow flex flex-col">
+                        <h3 class="text-xl font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">${individual.fullName}</h3>
+                        <p class="text-indigo-600 font-semibold text-sm mb-6">${individual.jobTitle}</p>
+                        
+                        <div class="space-y-4 text-left border-t border-slate-50 pt-6 mt-auto">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-slate-50 rounded-lg text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                                </div>
+                                <span class="text-xs font-medium text-slate-600 truncate">${individual.company}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-slate-50 rounded-lg text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                </div>
+                                <span class="text-xs font-medium text-slate-600 truncate">${individual.email}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-slate-50 rounded-lg text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                </div>
+                                <span class="text-xs font-medium text-slate-600 truncate">${individual.location}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions Footer -->
+                    <div class="bg-slate-50 px-8 py-4 border-t border-slate-100 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">${individual.phone}</span>
+                        <button class="text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:text-indigo-800 transition-colors">Details</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders all identity objects into the grid.
+         */
+        function renderIdentityGrid(identitiesArray) {
+            domElements.gridContainer.innerHTML = '';
+            
+            if (identitiesArray.length === 0) {
+                domElements.gridContainer.innerHTML = `
+                    <div class="col-span-full py-24 text-center">
+                        <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-2">No records to display</h2>
+                        <p class="text-slate-500 max-w-sm mx-auto">Sync data to load the latest identification cards from the directory service.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            identitiesArray.forEach(individual => {
+                const cardContainerElement = document.createElement('div');
+                cardContainerElement.innerHTML = createIdentityCardHtml(individual);
+                domElements.gridContainer.appendChild(cardContainerElement.firstElementChild);
+            });
+
+            domElements.recordCounter.textContent = identitiesArray.length;
+            domElements.dataBadge.classList.remove('hidden');
+        }
+
+        /**
+         * Orchestrates the fetching process from the endpoint.
+         */
+        async function fetchIdentitiesFromEndpoint() {
+            if (applicationState.isFetchingData) return;
+            if (!applicationState.dataSourceUrl) {
+                displayApplicationFeedback(
+                    "Configuration Missing", 
+                    "Please provide a valid data source URL in the application logic.", 
+                    "error"
+                );
+                return;
+            }
+
+            applicationState.isFetchingData = true;
+            domElements.syncButton.disabled = true;
+            domElements.buttonIcon.classList.add('animate-spin');
+            
+            try {
+                const networkResponse = await fetch(applicationState.dataSourceUrl);
+                
+                if (!networkResponse.ok) {
+                    throw new Error(`Endpoint connection failed with status: ${networkResponse.status}`);
+                }
+                
+                const receivedData = await networkResponse.json();
+                
+                // Assuming the structure is an array of objects
+                applicationState.identities = Array.isArray(receivedData) ? receivedData : (receivedData.data || []);
+                
+                renderIdentityGrid(applicationState.identities);
+                displayApplicationFeedback(
+                    "Sync Successful", 
+                    `Successfully imported ${applicationState.identities.length} identity records.`, 
+                    "success"
+                );
+            } catch (networkError) {
+                console.error("Critical Application Error:", networkError);
+                displayApplicationFeedback(
+                    "Sync Failed", 
+                    "Unable to reach the identification server. Check your connection or URL.", 
+                    "error"
+                );
+            } finally {
+                applicationState.isFetchingData = false;
+                domElements.syncButton.disabled = false;
+                domElements.buttonIcon.classList.remove('animate-spin');
+            }
+        }
+
+        // Event Listeners
+        domElements.syncButton.addEventListener('click', fetchIdentitiesFromEndpoint);
+
+        // Initialization - show empty state initially
+        window.addEventListener('DOMContentLoaded', () => {
+            renderIdentityGrid([]);
+        });
+    </script>
+</body>
+</html>
