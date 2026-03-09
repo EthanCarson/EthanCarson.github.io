@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Coding Masterclass Summary</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Configure Tailwind to use the 'class' strategy for dark mode
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a', // slate-900
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom transitions for smooth theme switching */
+        body {
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+        .topic-card {
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s;
+        }
+        .topic-card:hover {
+            transform: translateY(-4.5px);
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans min-h-screen">
+
+    <!-- Header Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 dark:bg-slate-900/90 dark:border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                Vibe Coding <span class="hidden sm:inline">Summary</span>
+            </h1>
+            
+            <div class="flex items-center gap-4">
+                <button id="themeToggle" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:ring-2 ring-indigo-500 transition-all focus:outline-none" aria-label="Toggle Dark Mode">
+                    <!-- Sun Icon (visible in dark mode) -->
+                    <svg id="sunIcon" class="w-5 h-5 hidden dark:block text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"></path></svg>
+                    <!-- Moon Icon (visible in light mode) -->
+                    <svg id="moonIcon" class="w-5 h-5 block dark:hidden text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+                <a href="#reflection" class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm">Reflection</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-12">
+        
+        <!-- Hero Section -->
+        <header class="mb-16 text-center">
+            <h2 class="text-4xl sm:text-5xl font-extrabold mb-6 text-slate-900 dark:text-white tracking-tight">Curriculum Overview</h2>
+            <p class="text-slate-700 dark:text-slate-300 text-lg max-w-2xl mx-auto leading-relaxed">
+                A high-contrast, interactive summary of our Vibe Coding journey. 
+                Search through the modules below or jump to the reflection section to add your conclusion.
+            </p>
+        </header>
+
+        <!-- Search & Filter Bar -->
+        <div class="mb-10 flex flex-col sm:flex-row gap-4">
+            <div class="relative flex-1">
+                <input type="text" id="searchInput" placeholder="Search topics (e.g. 'Git', 'React')..." class="w-full p-4 pl-12 rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow">
+                <svg class="w-5 h-5 absolute left-4 top-4.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <select id="categoryFilter" class="p-4 rounded-2xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500">
+                <option value="all">All Modules</option>
+                <option value="coding">Core Coding</option>
+                <option value="workflow">Workflow & Tools</option>
+                <option value="ui">UI/UX & Design</option>
+            </select>
+        </div>
+
+        <!-- Cards Grid -->
+        <div id="cardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Dynamic cards inject here -->
+        </div>
+
+        <!-- Reflection Section (User Editable in Code) -->
+        <section id="reflection" class="mt-24 p-8 sm:p-12 rounded-[2.5rem] bg-indigo-50/50 border border-indigo-100 dark:bg-slate-800/40 dark:border-slate-700 transition-colors">
+            <h3 class="text-3xl font-bold mb-6 text-slate-900 dark:text-white">Course Reflection</h3>
+            
+            <div class="prose prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 text-lg leading-relaxed">
+                <!-- EDIT THE TEXT BELOW TO ADD YOUR CONCLUSION -->
+                <p class="mb-4">
+                    So far, I really enjoy this class, and found the work so far very intriguing. Pretty much every assignment I have worked on has given me ideas on how I can use either AI or web tools to help create the sites I have strived for. I enjoy having this place to experiment and learn the skills I believe will become useful in my future!
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-24 py-12 border-t border-slate-200 dark:border-slate-800 text-center text-slate-500 dark:text-slate-400 text-sm">
+        <p class="font-medium mb-1">&copy; 2024 Vibe Coding Collective</p>
+        <p>Built with Vanilla JS &bull; Accessible &bull; Dynamic</p>
+    </footer>
+
+    <!-- Core Logic -->
+    <script>
+        const topics = [
+            {
+                title: "Prompt Engineering Basics",
+                category: "coding",
+                description: "Learning the art of communicating with AI. Focus on context, constraints, and iterative refinement to get the best code output.",
+                tags: ["AI", "Iterative", "Context"]
+            },
+            {
+                title: "Vanilla HTML and JS",
+                category: "coding",
+                description: "The foundations of the web. Structuring content with semantic HTML and adding behavior with pure JavaScript DOM manipulation.",
+                tags: ["Fundamentals", "DOM", "ES6"]
+            },
+            {
+                title: "Pros and Cons of React",
+                category: "coding",
+                description: "Analyzing component-based architecture. Pros: Reusability, State management. Cons: Overhead, bundle size, learning curve.",
+                tags: ["Frameworks", "Components"]
+            },
+            {
+                title: "Libraries like Bootstrap",
+                category: "ui",
+                description: "Leveraging pre-built CSS components and grid systems to speed up development and ensure consistent UI.",
+                tags: ["CSS", "Frameworks", "UI"]
+            },
+            {
+                title: "JS Time keeping",
+                category: "coding",
+                description: "Mastering setTimeout, setInterval, and the Date object. Essential for games, animations, and real-time updates.",
+                tags: ["Timing", "Async"]
+            },
+            {
+                title: "HTML Cards",
+                category: "ui",
+                description: "A staple of modern UI design. Creating self-contained content blocks that are responsive and visually appealing.",
+                tags: ["Design", "Layout"]
+            },
+            {
+                title: "Night Mode",
+                category: "ui",
+                description: "Implementing user preferences for dark themes using CSS variables or Tailwind's dark mode classes and local storage.",
+                tags: ["Theming", "UX"]
+            },
+            {
+                title: "Dynamic Sites for Mobile",
+                category: "ui",
+                description: "Responsive design principles. Using media queries and flexible units to ensure the site works on any screen size.",
+                tags: ["Mobile First", "Responsive"]
+            },
+            {
+                title: "Accessibility",
+                category: "ui",
+                description: "Building for everyone. Semantic tags, ARIA labels, keyboard navigation, and color contrast compliance.",
+                tags: ["A11y", "Inclusive"]
+            },
+            {
+                title: "Debugging",
+                category: "coding",
+                description: "The detective work of coding. Using console tools, breakpoints, and systematic testing to find and fix errors.",
+                tags: ["Console", "Testing"]
+            },
+            {
+                title: "Images and Canvas",
+                category: "coding",
+                description: "Handling visual assets and the HTML5 Canvas API for programmatic drawing and game development.",
+                tags: ["Graphics", "Canvas API"]
+            },
+            {
+                title: "Theming",
+                category: "ui",
+                description: "Creating a cohesive visual language. Defining color palettes, typography, and spacing systems.",
+                tags: ["Design System", "Colors"]
+            },
+            {
+                title: "Git Commands",
+                category: "workflow",
+                description: "Essential CLI commands: add, commit, push, pull, branch, and merge for version control.",
+                tags: ["Git", "CLI"]
+            },
+            {
+                title: "Git Workflow",
+                category: "workflow",
+                description: "Best practices for collaboration: Feature branching, Pull Requests, and code review cycles.",
+                tags: ["Collaboration", "Agile"]
+            },
+            {
+                title: "IDEs",
+                category: "workflow",
+                description: "Maximizing productivity with tools like VS Code. Extensions, keyboard shortcuts, and integrated terminals.",
+                tags: ["VS Code", "Tooling"]
+            },
+            {
+                title: "GitHub Pages",
+                category: "workflow",
+                description: "Easy deployment for static sites directly from your repository. Hosting your projects for the world to see.",
+                tags: ["Deployment", "Hosting"]
+            },
+            {
+                title: "Webapp",
+                category: "coding",
+                description: "Transitioning from static pages to interactive applications with state, logic, and user interaction.",
+                tags: ["Architecture", "Apps"]
+            },
+            {
+                title: "Folder naming",
+                category: "workflow",
+                description: "Project organization: kebab-case, assets structure, and logical file grouping for maintainable codebases.",
+                tags: ["Organization", "Standards"]
+            }
+        ];
+
+        const state = {
+            searchTerm: '',
+            category: 'all',
+            isDarkMode: localStorage.getItem('vibeDarkMode') === 'true'
+        };
+
+        const cardsGrid = document.getElementById('cardsGrid');
+        const themeToggle = document.getElementById('themeToggle');
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+
+        function initTheme() {
+            if (state.isDarkMode) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function toggleTheme() {
+            state.isDarkMode = !state.isDarkMode;
+            localStorage.setItem('vibeDarkMode', state.isDarkMode);
+            initTheme();
+        }
+
+        function renderCards() {
+            const filtered = topics.filter(topic => {
+                const searchStr = state.searchTerm.toLowerCase();
+                const matchesSearch = topic.title.toLowerCase().includes(searchStr) || 
+                                     topic.description.toLowerCase().includes(searchStr);
+                const matchesCategory = state.category === 'all' || topic.category === state.category;
+                return matchesSearch && matchesCategory;
+            });
+
+            cardsGrid.innerHTML = filtered.map(topic => `
+                <div class="topic-card bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl flex flex-col h-full">
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider 
+                                ${topic.category === 'coding' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 
+                                  topic.category === 'workflow' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' : 
+                                  'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300'}">
+                                ${topic.category}
+                            </span>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-3 text-slate-900 dark:text-white leading-tight">${topic.title}</h3>
+                        <p class="text-slate-700 dark:text-slate-300 text-base leading-relaxed mb-6">${topic.description}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-auto pt-6 border-t border-slate-50 dark:border-slate-700/50">
+                        ${topic.tags.map(tag => `<span class="text-xs font-medium text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-1 rounded">#${tag}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            if (filtered.length === 0) {
+                cardsGrid.innerHTML = `<div class="col-span-full py-24 text-center text-slate-500">No topics match your search.</div>`;
+            }
+        }
+
+        // Listeners
+        themeToggle.addEventListener('click', toggleTheme);
+        searchInput.addEventListener('input', (e) => { state.searchTerm = e.target.value; renderCards(); });
+        categoryFilter.addEventListener('change', (e) => { state.category = e.target.value; renderCards(); });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            renderCards();
+        });
+    </script>
+</body>
+</html>
