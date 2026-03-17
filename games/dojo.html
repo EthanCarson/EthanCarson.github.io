@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shadow Dojo: Kinetic Master</title>
+    <title>Shadow Dojo: Face Defense</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- MediaPipe Pose Libraries -->
@@ -18,6 +18,7 @@
             --dojo-red: #ff4d4d;
             --dojo-gold: #ffd700;
             --dojo-blue: #00d4ff;
+            --dojo-purple: #a855f7;
         }
 
         body {
@@ -93,12 +94,12 @@
         }
 
         .flash-red {
-            animation: flash 0.5s infinite;
+            animation: flashRed 0.5s forwards;
         }
 
-        @keyframes flash {
+        @keyframes flashRed {
             0% { background-color: rgba(255, 77, 77, 0); }
-            50% { background-color: rgba(255, 77, 77, 0.3); }
+            50% { background-color: rgba(255, 77, 77, 0.4); }
             100% { background-color: rgba(255, 77, 77, 0); }
         }
 
@@ -124,6 +125,13 @@
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
         }
 
         button {
@@ -154,44 +162,51 @@
                     </div>
                 </div>
                 <div class="flex flex-col items-end">
-                    <div id="mode-display" class="text-xl font-bold text-blue-400">LOADING CAMERA...</div>
+                    <div id="mode-display" class="text-xl font-bold text-blue-400">LOADING...</div>
                     <div id="fps-counter" class="text-xs text-gray-500">FPS: --</div>
                 </div>
             </div>
-            <div id="damage-overlay" class="absolute inset-0 pointer-events-none"></div>
+            <div id="flash-overlay" class="absolute inset-0 pointer-events-none"></div>
         </div>
 
         <!-- Start Screen -->
         <div id="menu-screen" class="menu-screen">
-            <h1 class="title-font text-7xl mb-2 text-yellow-500 text-center">KINETIC MASTER</h1>
-            <p class="text-gray-400 mb-8 max-w-md text-center">Inspired by the "Way of the Warrior", but powered by AI. Use your body to strike targets and avoid obstacles.</p>
+            <h1 class="title-font text-7xl mb-2 text-yellow-500 text-center">FACE DEFENSE</h1>
+            <div class="glass-panel p-6 text-center max-w-lg mb-8">
+                <p class="text-lg mb-4">Master the flow of spirits:</p>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-red-900/30 p-3 border border-red-500/50 rounded-lg">
+                        <span class="text-red-400 font-bold block mb-1">RED SPIRITS</span>
+                        <span class="opacity-80">STRIKE with limbs for points.<br>DODGE with face or lose health.</span>
+                    </div>
+                    <div class="bg-blue-900/30 p-3 border border-blue-500/50 rounded-lg">
+                        <span class="text-blue-400 font-bold block mb-1">BLUE SPIRITS</span>
+                        <span class="opacity-80">CATCH with face for high points.<br>DO NOT STRIKE or they explode.</span>
+                    </div>
+                </div>
+            </div>
             
             <div id="loading-area" class="flex flex-col items-center gap-4">
                 <div class="loading-spinner"></div>
-                <p id="loading-text">Initializing Pose Tracking...</p>
+                <p id="loading-text">Awakening the Sensei...</p>
             </div>
 
             <div id="start-controls" class="hidden flex flex-col gap-4 w-full max-w-xs interactive">
-                <button onclick="startGame('strike')" class="bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg uppercase tracking-widest border-b-4 border-red-800">
-                    Spirit Strike Mode
+                <button onclick="startGame()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg uppercase tracking-widest border-b-4 border-red-800">
+                    BEGIN TRIAL
                 </button>
-                <button onclick="startGame('reflex')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg uppercase tracking-widest border-b-4 border-blue-800">
-                    Guardian Reflex Mode
-                </button>
-                <p class="text-xs text-gray-500 text-center mt-4">Stand back so your whole body is visible.</p>
+                <p class="text-xs text-gray-400 text-center mt-4">Full body visibility required.</p>
             </div>
         </div>
 
         <!-- Game Over Screen -->
         <div id="game-over-screen" class="menu-screen hidden">
-            <h1 class="title-font text-6xl mb-2 text-red-500">DEFEATED</h1>
+            <h1 class="title-font text-6xl mb-2 text-red-500">DEFENSE BREACHED</h1>
             <p id="final-score" class="text-2xl mb-4">FINAL SCORE: 0</p>
             
             <div id="leaderboard" class="w-full max-w-sm glass-panel p-4 mb-6 hidden">
                 <h2 class="title-font text-xl text-yellow-400 mb-3 text-center">HALL OF FAME</h2>
-                <div id="score-list" class="space-y-1 text-sm">
-                    <!-- Scores injected here -->
-                </div>
+                <div id="score-list" class="space-y-1 text-sm"></div>
             </div>
 
             <div class="flex flex-col gap-3 interactive">
@@ -201,7 +216,7 @@
                     SUBMIT TO LEADERBOARD
                 </button>
                 <button onclick="location.reload()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg">
-                    RETRY
+                    TRY AGAIN
                 </button>
             </div>
         </div>
@@ -210,85 +225,73 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-      const firebaseConfig = {
-    apiKey: "AIzaSyDaQDHVELYHyCIgRntocA7HUS7V0XLt980",
-    authDomain: "dojo-236be.firebaseapp.com",
-    projectId: "dojo-236be",
-    storageBucket: "dojo-236be.firebasestorage.app",
-    messagingSenderId: "828828279034",
-    appId: "1:828828279034:web:2abbdaf35d5287dea72943"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyDaQDHVELYHyCIgRntocA7HUS7V0XLt980",
+  authDomain: "dojo-236be.firebaseapp.com",
+  projectId: "dojo-236be",
+  storageBucket: "dojo-236be.firebasestorage.app",
+  messagingSenderId: "828828279034",
+  appId: "1:828828279034:web:2abbdaf35d5287dea72943"
+};
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        let currentUserId = null;
 
-        // Sign in anonymously
-        signInAnonymously(auth).catch(err => console.error("Firebase Auth Error:", err));
-        onAuthStateChanged(auth, (user) => { if (user) currentUserId = user.uid; });
+        signInAnonymously(auth).catch(() => {});
 
-        // Exposure of functions to window for onclick handlers
         window.submitScoreToFirebase = async () => {
             const nameInput = document.getElementById('player-name');
             const btn = document.getElementById('submit-score-btn');
-            const name = nameInput.value.trim() || "Anonymous Ninja";
-
+            const playerName = nameInput.value.trim() || "Mysterious Ninja";
+            
             btn.disabled = true;
             btn.innerText = "SAVING...";
-
+            
             try {
                 await addDoc(collection(db, "high_scores"), {
-                    name: name,
+                    name: playerName,
                     score: gameState.score,
-                    mode: gameState.gameMode,
                     timestamp: serverTimestamp()
                 });
                 btn.innerText = "SCORE SAVED!";
                 fetchLeaderboard();
             } catch (error) {
-                console.error("Error saving score:", error);
-                btn.innerText = "SAVE FAILED";
+                console.error("Firebase Error:", error);
                 btn.disabled = false;
+                btn.innerText = "RETRY SUBMISSION";
             }
         };
 
         window.fetchLeaderboard = async () => {
-            const scoreList = document.getElementById('score-list');
-            const boardContainer = document.getElementById('leaderboard');
-            scoreList.innerHTML = "<p class='text-center opacity-50'>Fetching Scroll of Honor...</p>";
-            boardContainer.classList.remove('hidden');
-
+            const listElement = document.getElementById('score-list');
+            document.getElementById('leaderboard').classList.remove('hidden');
             try {
                 const q = query(collection(db, "high_scores"), orderBy("score", "desc"), limit(10));
-                const querySnapshot = await getDocs(q);
-                
-                scoreList.innerHTML = "";
-                let rank = 1;
-                querySnapshot.forEach((doc) => {
+                const snapshot = await getDocs(q);
+                listElement.innerHTML = "";
+                let position = 1;
+                snapshot.forEach(doc => {
                     const data = doc.data();
-                    const item = document.createElement('div');
-                    item.className = "flex justify-between border-b border-white/5 py-1";
-                    item.innerHTML = `<span>${rank}. ${data.name}</span><span class='text-yellow-400 font-bold'>${data.score}</span>`;
-                    scoreList.appendChild(item);
-                    rank++;
+                    listElement.innerHTML += `
+                        <div class="flex justify-between border-b border-white/5 py-1">
+                            <span>${position}. ${data.name}</span>
+                            <span class='text-yellow-400 font-bold'>${data.score}</span>
+                        </div>`;
+                    position++;
                 });
-
-                if (querySnapshot.empty) scoreList.innerHTML = "No legends yet...";
-            } catch (error) {
-                console.error("Error fetching leaderboard:", error);
-                scoreList.innerHTML = "Leaderboard connection lost.";
+            } catch {
+                listElement.innerHTML = "<p class='text-center opacity-50'>Leaderboard temporarily unavailable.</p>";
             }
         };
     </script>
 
     <script>
         /**
-         * GAME ENGINE - PRESERVED LOGIC
+         * GAME ENGINE - STRATEGIC MIX-UP LOGIC
          */
         const videoElement = document.getElementById('input-video');
         const canvasElement = document.getElementById('output-canvas');
@@ -297,132 +300,255 @@
         const scoreDisplay = document.getElementById('score-display');
         const menuScreen = document.getElementById('menu-screen');
         const gameOverScreen = document.getElementById('game-over-screen');
-        const damageOverlay = document.getElementById('damage-overlay');
+        const flashOverlay = document.getElementById('flash-overlay');
 
         let gameState = {
             isRunning: false,
             score: 0,
             health: 100,
-            gameMode: 'strike',
             targets: [],
             particles: [],
             lastFrameTime: 0,
             difficulty: 1.0,
-            poseLandmarks: null
+            poseLandmarks: null,
+            faceTargetX: 0,
+            faceTargetY: 0
         };
 
-        const COLORS = { ENEMY: '#ff4d4d', FRIEND: '#00d4ff', PLAYER: '#ffd700' };
+        const COLORS = { RED: '#ff4d4d', BLUE: '#00d4ff', PLAYER: '#ffd700', PURPLE: '#a855f7' };
 
         class GameTarget {
-            constructor(mode) {
-                this.radius = 40 + (Math.random() * 20);
-                this.isFriendly = (mode === 'reflex' && Math.random() > 0.7);
+            constructor() {
+                this.radius = 35 + (Math.random() * 15);
+                this.isFragile = Math.random() > 0.75; // Blue ones are Fragile Spirits
+                
                 const side = Math.floor(Math.random() * 4);
                 if (side === 0) { this.x = Math.random() * canvasElement.width; this.y = -this.radius; }
                 else if (side === 1) { this.x = canvasElement.width + this.radius; this.y = Math.random() * canvasElement.height; }
                 else if (side === 2) { this.x = Math.random() * canvasElement.width; this.y = canvasElement.height + this.radius; }
                 else { this.x = -this.radius; this.y = Math.random() * canvasElement.height; }
-                const centerX = canvasElement.width / 2, centerY = canvasElement.height / 2;
-                const angle = Math.atan2(centerY - this.y, centerX - this.x);
-                const speed = (2 + Math.random() * 3) * gameState.difficulty;
-                this.velocityX = Math.cos(angle) * speed;
-                this.velocityY = Math.sin(angle) * speed;
-                this.pulsate = 0; this.isHit = false;
+                
+                this.speed = (1.8 + Math.random() * 2) * gameState.difficulty;
+                this.isDeactivated = false;
             }
+
             update() {
-                this.x += this.velocityX; this.y += this.velocityY; this.pulsate += 0.1;
-                const dx = this.x - (canvasElement.width / 2), dy = this.y - (canvasElement.height / 2);
-                const distanceToCenter = Math.sqrt(dx * dx + dy * dy);
-                if (distanceToCenter < 100 && !this.isHit) {
-                    if (!this.isFriendly) applyDamage(15);
-                    this.isHit = true; return true;
+                // HOMING: Head toward face
+                const angleToFace = Math.atan2(gameState.faceTargetY - this.y, gameState.faceTargetX - this.x);
+                this.x += Math.cos(angleToFace) * this.speed;
+                this.y += Math.sin(angleToFace) * this.speed;
+
+                // FACE INTERACTION
+                const distanceToFaceCenter = Math.sqrt(Math.pow(this.x - gameState.faceTargetX, 2) + Math.pow(this.y - gameState.faceTargetY, 2));
+                if (distanceToFaceCenter < this.radius + 30 && !this.isDeactivated) {
+                    this.isDeactivated = true;
+                    if (this.isFragile) {
+                        // CATCH BLUE: Reward points
+                        gameState.score += 25;
+                        scoreDisplay.innerText = `SCORE: ${gameState.score}`;
+                        this.triggerEffect(COLORS.BLUE);
+                    } else {
+                        // HIT BY RED: Take damage
+                        applyDamage(15);
+                        this.triggerEffect(COLORS.RED);
+                    }
+                    return true;
                 }
+
+                // STRIKE INTERACTION (Hands/Feet)
                 if (gameState.poseLandmarks) {
                     const strikePoints = [15, 16, 19, 20, 31, 32];
-                    for (let index of strikePoints) {
-                        const landmark = gameState.poseLandmarks[index];
-                        const mirroredX = 1 - landmark.x; 
-                        const px = mirroredX * canvasElement.width, py = landmark.y * canvasElement.height;
-                        if (Math.sqrt(Math.pow(this.x - px, 2) + Math.pow(this.y - py, 2)) < this.radius + 25) {
-                            this.handleStrike(); return true;
+                    for (let pointId of strikePoints) {
+                        const landmark = gameState.poseLandmarks[pointId];
+                        const mirroredPointX = (1 - landmark.x) * canvasElement.width;
+                        const pointY = landmark.y * canvasElement.height;
+                        
+                        const distanceToStrike = Math.sqrt(Math.pow(this.x - mirroredPointX, 2) + Math.pow(this.y - pointY, 2));
+                        if (distanceToStrike < this.radius + 30) {
+                            this.isDeactivated = true;
+                            if (this.isFragile) {
+                                // STRIKE BLUE: Penalty (It's fragile and shouldn't be broken)
+                                applyDamage(20);
+                                this.triggerEffect(COLORS.PURPLE);
+                            } else {
+                                // STRIKE RED: Reward points
+                                gameState.score += 10;
+                                scoreDisplay.innerText = `SCORE: ${gameState.score}`;
+                                gameState.difficulty += 0.008;
+                                this.triggerEffect(COLORS.RED);
+                            }
+                            return true;
                         }
                     }
                 }
                 return false;
             }
-            handleStrike() {
-                this.isHit = true;
-                if (this.isFriendly) { applyDamage(20); spawnExplosion(this.x, this.y, COLORS.FRIEND); }
-                else { gameState.score += 10; scoreDisplay.innerText = `SCORE: ${gameState.score}`; spawnExplosion(this.x, this.y, COLORS.ENEMY); gameState.difficulty += 0.01; }
+
+            triggerEffect(color) {
+                for (let i = 0; i < 15; i++) {
+                    gameState.particles.push({
+                        x: this.x, y: this.y,
+                        vx: (Math.random() - 0.5) * 14,
+                        vy: (Math.random() - 0.5) * 14,
+                        life: 1.0, color: color
+                    });
+                }
             }
+
             draw(ctx) {
-                ctx.save(); ctx.shadowBlur = 10 + Math.sin(this.pulsate)*5;
-                ctx.shadowColor = this.isFriendly ? COLORS.FRIEND : COLORS.ENEMY;
-                ctx.fillStyle = this.isFriendly ? COLORS.FRIEND : COLORS.ENEMY;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2); ctx.stroke();
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.isFragile ? COLORS.BLUE : COLORS.RED;
+                ctx.fillStyle = this.isFragile ? COLORS.BLUE : COLORS.RED;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Ring effect
+                ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash(this.isFragile ? [5, 5] : []); // Dashed for fragile
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
+                ctx.stroke();
                 ctx.restore();
             }
         }
 
-        function spawnExplosion(x, y, color) {
-            for (let i = 0; i < 15; i++) gameState.particles.push({ x, y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, life: 1.0, color });
-        }
-
         function applyDamage(amount) {
-            gameState.health -= amount; healthFill.style.width = `${Math.max(0, gameState.health)}%`;
-            damageOverlay.classList.add('flash-red'); setTimeout(() => damageOverlay.classList.remove('flash-red'), 300);
+            gameState.health -= amount;
+            updateHealthBar();
+            flashOverlay.className = "absolute inset-0 pointer-events-none flash-red";
+            setTimeout(() => flashOverlay.className = "absolute inset-0 pointer-events-none", 400);
             if (gameState.health <= 0) endGame();
         }
 
-        function startGame(mode) {
-            gameState.isRunning = true; gameState.score = 0; gameState.health = 100; gameState.gameMode = mode;
-            gameState.targets = []; gameState.particles = []; gameState.difficulty = 1.0;
-            scoreDisplay.innerText = `SCORE: 0`; healthFill.style.width = `100%`;
-            document.getElementById('mode-display').innerText = mode.toUpperCase() + " MODE";
-            menuScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden');
+        function updateHealthBar() {
+            healthFill.style.width = `${Math.max(0, gameState.health)}%`;
+            if (gameState.health < 30) {
+                healthFill.style.background = 'linear-gradient(90deg, #ff4444, #ff8888)';
+            } else {
+                healthFill.style.background = 'linear-gradient(90deg, #ff4d4d, #ffd700)';
+            }
+        }
+
+        function startGame() {
+            gameState.isRunning = true;
+            gameState.score = 0;
+            gameState.health = 100;
+            gameState.targets = [];
+            gameState.particles = [];
+            gameState.difficulty = 1.0;
+            scoreDisplay.innerText = "SCORE: 0";
+            updateHealthBar();
+            menuScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
         }
 
         function endGame() {
             gameState.isRunning = false;
             document.getElementById('final-score').innerText = `FINAL SCORE: ${gameState.score}`;
             gameOverScreen.classList.remove('hidden');
-            // Fetch leaderboard after game ends
             if (typeof fetchLeaderboard === "function") fetchLeaderboard();
         }
 
-        const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
-        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-        pose.onResults((results) => {
-            if (canvasElement.width !== window.innerWidth) { canvasElement.width = window.innerWidth; canvasElement.height = window.innerHeight; }
+        const poseProcessor = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+        poseProcessor.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        
+        poseProcessor.onResults((results) => {
+            if (canvasElement.width !== window.innerWidth) {
+                canvasElement.width = window.innerWidth;
+                canvasElement.height = window.innerHeight;
+            }
+            
             gameState.poseLandmarks = results.poseLandmarks;
-            canvasContext.save(); canvasContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasContext.translate(canvasElement.width, 0); canvasContext.scale(-1, 1);
-            canvasContext.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            
+            // TRACK NOSE FOR FACE POSITION
             if (results.poseLandmarks) {
-                drawConnectors(canvasContext, results.poseLandmarks, POSE_CONNECTIONS, { color: '#ffffff', lineWidth: 2 });
-                drawLandmarks(canvasContext, results.poseLandmarks, { color: COLORS.PLAYER, radius: 4 });
+                const noseLandmark = results.poseLandmarks[0];
+                gameState.faceTargetX = (1 - noseLandmark.x) * canvasElement.width;
+                gameState.faceTargetY = noseLandmark.y * canvasElement.height;
+            } else {
+                gameState.faceTargetX = canvasElement.width / 2;
+                gameState.faceTargetY = canvasElement.height / 2;
+            }
+
+            canvasContext.save();
+            canvasContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // Mirrored Feed
+            canvasContext.translate(canvasElement.width, 0);
+            canvasContext.scale(-1, 1);
+            canvasContext.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            
+            // Skeleton Visuals
+            if (results.poseLandmarks) {
+                drawConnectors(canvasContext, results.poseLandmarks, POSE_CONNECTIONS, { color: 'rgba(255,255,255,0.5)', lineWidth: 1 });
+                drawLandmarks(canvasContext, results.poseLandmarks, { color: COLORS.PLAYER, radius: 2 });
             }
             canvasContext.restore();
+
             if (gameState.isRunning) {
-                if (Math.random() < 0.02 * gameState.difficulty) gameState.targets.push(new GameTarget(gameState.gameMode));
-                for (let i = gameState.targets.length - 1; i >= 0; i--) if (gameState.targets[i].update()) gameState.targets.splice(i, 1); else gameState.targets[i].draw(canvasContext);
+                // Spawning
+                if (Math.random() < 0.02 * gameState.difficulty) gameState.targets.push(new GameTarget());
+                
+                // Targets
+                for (let i = gameState.targets.length - 1; i >= 0; i--) {
+                    if (gameState.targets[i].update()) {
+                        gameState.targets.splice(i, 1);
+                    } else {
+                        gameState.targets[i].draw(canvasContext);
+                    }
+                }
+                
+                // Particles
                 for (let i = gameState.particles.length - 1; i >= 0; i--) {
-                    const p = gameState.particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-                    if (p.life <= 0) gameState.particles.splice(i, 1);
-                    else { canvasContext.globalAlpha = p.life; canvasContext.fillStyle = p.color; canvasContext.beginPath(); canvasContext.arc(p.x, p.y, 3, 0, Math.PI * 2); canvasContext.fill(); }
+                    const particle = gameState.particles[i];
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.life -= 0.03;
+                    if (particle.life <= 0) {
+                        gameState.particles.splice(i, 1);
+                    } else {
+                        canvasContext.globalAlpha = particle.life;
+                        canvasContext.fillStyle = particle.color;
+                        canvasContext.beginPath();
+                        canvasContext.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
+                        canvasContext.fill();
+                    }
                 }
                 canvasContext.globalAlpha = 1.0;
-                canvasContext.strokeStyle = 'rgba(255, 255, 255, 0.2)'; canvasContext.setLineDash([5, 5]); canvasContext.beginPath(); canvasContext.arc(canvasElement.width/2, canvasElement.height/2, 80, 0, Math.PI * 2); canvasContext.stroke(); canvasContext.setLineDash([]);
+
+                // Face Reticle
+                canvasContext.strokeStyle = COLORS.PLAYER;
+                canvasContext.lineWidth = 2;
+                canvasContext.setLineDash([10, 5]);
+                canvasContext.beginPath();
+                canvasContext.arc(gameState.faceTargetX, gameState.faceTargetY, 60, 0, Math.PI * 2);
+                canvasContext.stroke();
+                canvasContext.setLineDash([]);
             }
-            const now = performance.now(); document.getElementById('fps-counter').innerText = `FPS: ${Math.round(1000 / (now - gameState.lastFrameTime))}`; gameState.lastFrameTime = now;
+            
+            const frameTimeNow = performance.now();
+            document.getElementById('fps-counter').innerText = `FPS: ${Math.round(1000 / (frameTimeNow - gameState.lastFrameTime))}`;
+            gameState.lastFrameTime = frameTimeNow;
         });
 
-        const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({ image: videoElement }); }, width: 1280, height: 720 });
-        camera.start().then(() => { document.getElementById('loading-area').classList.add('hidden'); document.getElementById('start-controls').classList.remove('hidden'); document.getElementById('mode-display').innerText = "DOJO READY"; });
-        window.addEventListener('resize', () => { canvasElement.width = window.innerWidth; canvasElement.height = window.innerHeight; });
+        const gameCamera = new Camera(videoElement, {
+            onFrame: async () => { await poseProcessor.send({ image: videoElement }); },
+            width: 1280, height: 720
+        });
+
+        gameCamera.start().then(() => {
+            document.getElementById('loading-area').classList.add('hidden');
+            document.getElementById('start-controls').classList.remove('hidden');
+            document.getElementById('mode-display').innerText = "DOJO INITIALIZED";
+        });
+
+        window.addEventListener('resize', () => {
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+        });
     </script>
-</body>
-</html>
 </body>
 </html>
