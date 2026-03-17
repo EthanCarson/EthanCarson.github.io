@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shadow Dojo: Kinetic Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <!-- MediaPipe Pose Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rajdhani:wght@500;700&display=swap');
 
@@ -40,7 +42,6 @@
             align-items: center;
         }
 
-        /* Video is hidden but used for tracking */
         #input-video {
             display: none;
         }
@@ -66,13 +67,6 @@
 
         .interactive {
             pointer-events: auto;
-        }
-
-        .glass-panel {
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
         }
 
         .status-bar {
@@ -145,13 +139,9 @@
 <body>
 
     <div id="game-container">
-        <!-- Input Video (Hidden) -->
         <video id="input-video" playsinline></video>
-        
-        <!-- Game Display -->
         <canvas id="output-canvas"></canvas>
 
-        <!-- UI Overlay -->
         <div class="ui-overlay">
             <div class="status-bar">
                 <div class="flex flex-col gap-2">
@@ -168,7 +158,6 @@
                     <div id="fps-counter" class="text-xs text-gray-500">FPS: --</div>
                 </div>
             </div>
-            
             <div id="damage-overlay" class="absolute inset-0 pointer-events-none"></div>
         </div>
 
@@ -195,17 +184,111 @@
 
         <!-- Game Over Screen -->
         <div id="game-over-screen" class="menu-screen hidden">
-            <h1 class="title-font text-7xl mb-2 text-red-500">DEFEATED</h1>
-            <p id="final-score" class="text-3xl mb-8">FINAL SCORE: 0</p>
-            <button onclick="location.reload()" class="interactive bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg">
-                RETURN TO DOJO
-            </button>
+            <h1 class="title-font text-6xl mb-2 text-red-500">DEFEATED</h1>
+            <p id="final-score" class="text-2xl mb-4">FINAL SCORE: 0</p>
+            
+            <div id="leaderboard" class="w-full max-w-sm glass-panel p-4 mb-6 hidden">
+                <h2 class="title-font text-xl text-yellow-400 mb-3 text-center">HALL OF FAME</h2>
+                <div id="score-list" class="space-y-1 text-sm">
+                    <!-- Scores injected here -->
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 interactive">
+                <input type="text" id="player-name" placeholder="Enter Ninja Name" maxlength="15" 
+                       class="bg-gray-800 border border-gray-600 rounded p-2 text-center text-white focus:outline-none focus:border-yellow-500">
+                <button id="submit-score-btn" onclick="submitScoreToFirebase()" class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg">
+                    SUBMIT TO LEADERBOARD
+                </button>
+                <button onclick="location.reload()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg">
+                    RETRY
+                </button>
+            </div>
         </div>
     </div>
 
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+      const firebaseConfig = {
+    apiKey: "AIzaSyDaQDHVELYHyCIgRntocA7HUS7V0XLt980",
+    authDomain: "dojo-236be.firebaseapp.com",
+    projectId: "dojo-236be",
+    storageBucket: "dojo-236be.firebasestorage.app",
+    messagingSenderId: "828828279034",
+    appId: "1:828828279034:web:2abbdaf35d5287dea72943"
+  };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        let currentUserId = null;
+
+        // Sign in anonymously
+        signInAnonymously(auth).catch(err => console.error("Firebase Auth Error:", err));
+        onAuthStateChanged(auth, (user) => { if (user) currentUserId = user.uid; });
+
+        // Exposure of functions to window for onclick handlers
+        window.submitScoreToFirebase = async () => {
+            const nameInput = document.getElementById('player-name');
+            const btn = document.getElementById('submit-score-btn');
+            const name = nameInput.value.trim() || "Anonymous Ninja";
+
+            btn.disabled = true;
+            btn.innerText = "SAVING...";
+
+            try {
+                await addDoc(collection(db, "high_scores"), {
+                    name: name,
+                    score: gameState.score,
+                    mode: gameState.gameMode,
+                    timestamp: serverTimestamp()
+                });
+                btn.innerText = "SCORE SAVED!";
+                fetchLeaderboard();
+            } catch (error) {
+                console.error("Error saving score:", error);
+                btn.innerText = "SAVE FAILED";
+                btn.disabled = false;
+            }
+        };
+
+        window.fetchLeaderboard = async () => {
+            const scoreList = document.getElementById('score-list');
+            const boardContainer = document.getElementById('leaderboard');
+            scoreList.innerHTML = "<p class='text-center opacity-50'>Fetching Scroll of Honor...</p>";
+            boardContainer.classList.remove('hidden');
+
+            try {
+                const q = query(collection(db, "high_scores"), orderBy("score", "desc"), limit(10));
+                const querySnapshot = await getDocs(q);
+                
+                scoreList.innerHTML = "";
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const item = document.createElement('div');
+                    item.className = "flex justify-between border-b border-white/5 py-1";
+                    item.innerHTML = `<span>${rank}. ${data.name}</span><span class='text-yellow-400 font-bold'>${data.score}</span>`;
+                    scoreList.appendChild(item);
+                    rank++;
+                });
+
+                if (querySnapshot.empty) scoreList.innerHTML = "No legends yet...";
+            } catch (error) {
+                console.error("Error fetching leaderboard:", error);
+                scoreList.innerHTML = "Leaderboard connection lost.";
+            }
+        };
+    </script>
+
     <script>
         /**
-         * GLOBAL CONFIGURATION AND STATE
+         * GAME ENGINE - PRESERVED LOGIC
          */
         const videoElement = document.getElementById('input-video');
         const canvasElement = document.getElementById('output-canvas');
@@ -220,325 +303,126 @@
             isRunning: false,
             score: 0,
             health: 100,
-            gameMode: 'strike', // 'strike' or 'reflex'
+            gameMode: 'strike',
             targets: [],
             particles: [],
             lastFrameTime: 0,
-            frameDelta: 0,
             difficulty: 1.0,
             poseLandmarks: null
         };
 
-        const COLORS = {
-            ENEMY: '#ff4d4d',
-            FRIEND: '#00d4ff',
-            PLAYER: '#ffd700',
-            PARTICLE: '#ffffff'
-        };
+        const COLORS = { ENEMY: '#ff4d4d', FRIEND: '#00d4ff', PLAYER: '#ffd700' };
 
-        /**
-         * TARGET CLASS
-         * Represents enemies or friendly objects flying toward the user
-         */
         class GameTarget {
             constructor(mode) {
                 this.radius = 40 + (Math.random() * 20);
                 this.isFriendly = (mode === 'reflex' && Math.random() > 0.7);
-                
-                // Spawn from edges
                 const side = Math.floor(Math.random() * 4);
-                if (side === 0) { // Top
-                    this.x = Math.random() * canvasElement.width;
-                    this.y = -this.radius;
-                } else if (side === 1) { // Right
-                    this.x = canvasElement.width + this.radius;
-                    this.y = Math.random() * canvasElement.height;
-                } else if (side === 2) { // Bottom
-                    this.x = Math.random() * canvasElement.width;
-                    this.y = canvasElement.height + this.radius;
-                } else { // Left
-                    this.x = -this.radius;
-                    this.y = Math.random() * canvasElement.height;
-                }
-
-                // Move toward center with some randomness
-                const centerX = canvasElement.width / 2;
-                const centerY = canvasElement.height / 2;
+                if (side === 0) { this.x = Math.random() * canvasElement.width; this.y = -this.radius; }
+                else if (side === 1) { this.x = canvasElement.width + this.radius; this.y = Math.random() * canvasElement.height; }
+                else if (side === 2) { this.x = Math.random() * canvasElement.width; this.y = canvasElement.height + this.radius; }
+                else { this.x = -this.radius; this.y = Math.random() * canvasElement.height; }
+                const centerX = canvasElement.width / 2, centerY = canvasElement.height / 2;
                 const angle = Math.atan2(centerY - this.y, centerX - this.x);
                 const speed = (2 + Math.random() * 3) * gameState.difficulty;
-                
                 this.velocityX = Math.cos(angle) * speed;
                 this.velocityY = Math.sin(angle) * speed;
-                
-                this.pulsate = 0;
-                this.isHit = false;
+                this.pulsate = 0; this.isHit = false;
             }
-
             update() {
-                this.x += this.velocityX;
-                this.y += this.velocityY;
-                this.pulsate += 0.1;
-
-                // Check if it reached the center area (the user's "soul")
-                const dx = this.x - (canvasElement.width / 2);
-                const dy = this.y - (canvasElement.height / 2);
+                this.x += this.velocityX; this.y += this.velocityY; this.pulsate += 0.1;
+                const dx = this.x - (canvasElement.width / 2), dy = this.y - (canvasElement.height / 2);
                 const distanceToCenter = Math.sqrt(dx * dx + dy * dy);
-
                 if (distanceToCenter < 100 && !this.isHit) {
-                    if (!this.isFriendly) {
-                        applyDamage(15);
-                    }
-                    this.isHit = true;
-                    return true; // Mark for removal
+                    if (!this.isFriendly) applyDamage(15);
+                    this.isHit = true; return true;
                 }
-
-                // Check collision with hands/feet
                 if (gameState.poseLandmarks) {
-                    // Check Left Hand (Index 15/16), Right Hand (Index 19/20), etc.
-                    const strikePoints = [15, 16, 19, 20, 31, 32]; // Wrists/Hands + Feet
+                    const strikePoints = [15, 16, 19, 20, 31, 32];
                     for (let index of strikePoints) {
                         const landmark = gameState.poseLandmarks[index];
-                        
-                        // NOTE: Because we mirror the canvas for drawing, we must mirror the landmark X coordinate 
-                        // for collision logic since landmarks are extracted from the raw video (which is not mirrored).
                         const mirroredX = 1 - landmark.x; 
-                        const px = mirroredX * canvasElement.width;
-                        const py = landmark.y * canvasElement.height;
-                        
-                        const strikeDist = Math.sqrt(Math.pow(this.x - px, 2) + Math.pow(this.y - py, 2));
-                        if (strikeDist < this.radius + 25) {
-                            this.handleStrike();
-                            return true;
+                        const px = mirroredX * canvasElement.width, py = landmark.y * canvasElement.height;
+                        if (Math.sqrt(Math.pow(this.x - px, 2) + Math.pow(this.y - py, 2)) < this.radius + 25) {
+                            this.handleStrike(); return true;
                         }
                     }
                 }
-
                 return false;
             }
-
             handleStrike() {
                 this.isHit = true;
-                if (this.isFriendly) {
-                    applyDamage(20);
-                    spawnExplosion(this.x, this.y, COLORS.FRIEND);
-                } else {
-                    gameState.score += 10;
-                    scoreDisplay.innerText = `SCORE: ${gameState.score}`;
-                    spawnExplosion(this.x, this.y, COLORS.ENEMY);
-                    gameState.difficulty += 0.01;
-                }
+                if (this.isFriendly) { applyDamage(20); spawnExplosion(this.x, this.y, COLORS.FRIEND); }
+                else { gameState.score += 10; scoreDisplay.innerText = `SCORE: ${gameState.score}`; spawnExplosion(this.x, this.y, COLORS.ENEMY); gameState.difficulty += 0.01; }
             }
-
             draw(ctx) {
-                const glow = 10 + Math.sin(this.pulsate) * 5;
-                ctx.save();
-                ctx.shadowBlur = glow;
+                ctx.save(); ctx.shadowBlur = 10 + Math.sin(this.pulsate)*5;
                 ctx.shadowColor = this.isFriendly ? COLORS.FRIEND : COLORS.ENEMY;
                 ctx.fillStyle = this.isFriendly ? COLORS.FRIEND : COLORS.ENEMY;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Inner detail
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2); ctx.stroke();
                 ctx.restore();
             }
         }
 
-        /**
-         * PARTICLE SYSTEM
-         */
         function spawnExplosion(x, y, color) {
-            for (let i = 0; i < 15; i++) {
-                gameState.particles.push({
-                    x, y,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    life: 1.0,
-                    color: color
-                });
-            }
+            for (let i = 0; i < 15; i++) gameState.particles.push({ x, y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, life: 1.0, color });
         }
 
-        function updateParticles() {
-            for (let i = gameState.particles.length - 1; i >= 0; i--) {
-                const p = gameState.particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.02;
-                if (p.life <= 0) gameState.particles.splice(i, 1);
-            }
-        }
-
-        /**
-         * GAME LOGIC FUNCTIONS
-         */
         function applyDamage(amount) {
-            gameState.health -= amount;
-            if (gameState.health < 0) gameState.health = 0;
-            healthFill.style.width = `${gameState.health}%`;
-            
-            // Visual feedback
-            damageOverlay.classList.add('flash-red');
-            setTimeout(() => damageOverlay.classList.remove('flash-red'), 300);
-
-            if (gameState.health <= 0) {
-                endGame();
-            }
+            gameState.health -= amount; healthFill.style.width = `${Math.max(0, gameState.health)}%`;
+            damageOverlay.classList.add('flash-red'); setTimeout(() => damageOverlay.classList.remove('flash-red'), 300);
+            if (gameState.health <= 0) endGame();
         }
 
         function startGame(mode) {
-            gameState.isRunning = true;
-            gameState.score = 0;
-            gameState.health = 100;
-            gameState.gameMode = mode;
-            gameState.targets = [];
-            gameState.particles = [];
-            gameState.difficulty = 1.0;
-            
-            scoreDisplay.innerText = `SCORE: 0`;
-            healthFill.style.width = `100%`;
+            gameState.isRunning = true; gameState.score = 0; gameState.health = 100; gameState.gameMode = mode;
+            gameState.targets = []; gameState.particles = []; gameState.difficulty = 1.0;
+            scoreDisplay.innerText = `SCORE: 0`; healthFill.style.width = `100%`;
             document.getElementById('mode-display').innerText = mode.toUpperCase() + " MODE";
-            
-            menuScreen.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
+            menuScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden');
         }
 
         function endGame() {
             gameState.isRunning = false;
             document.getElementById('final-score').innerText = `FINAL SCORE: ${gameState.score}`;
             gameOverScreen.classList.remove('hidden');
+            // Fetch leaderboard after game ends
+            if (typeof fetchLeaderboard === "function") fetchLeaderboard();
         }
 
-        /**
-         * MEDIAPIPE INITIALIZATION
-         */
-        const pose = new Pose({
-            locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-            }
-        });
-
-        pose.setOptions({
-            modelComplexity: 1,
-            smoothLandmarks: true,
-            enableSegmentation: false,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
+        const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
         pose.onResults((results) => {
-            // Update Canvas Size to match window
-            if (canvasElement.width !== window.innerWidth || canvasElement.height !== window.innerHeight) {
-                canvasElement.width = window.innerWidth;
-                canvasElement.height = window.innerHeight;
-            }
-
+            if (canvasElement.width !== window.innerWidth) { canvasElement.width = window.innerWidth; canvasElement.height = window.innerHeight; }
             gameState.poseLandmarks = results.poseLandmarks;
-
-            // Clear Background
-            canvasContext.save();
-            canvasContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
-            // MIRROR EFFECT:
-            // Translate to the right edge and scale X by -1 to flip the drawing horizontally
-            canvasContext.translate(canvasElement.width, 0);
-            canvasContext.scale(-1, 1);
-            
-            // Draw Video Frame as backdrop (now mirrored)
+            canvasContext.save(); canvasContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasContext.translate(canvasElement.width, 0); canvasContext.scale(-1, 1);
             canvasContext.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-            // Draw Skeleton Visualization (now mirrored because of the context transformation)
             if (results.poseLandmarks) {
-                drawConnectors(canvasContext, results.poseLandmarks, POSE_CONNECTIONS,
-                    { color: '#ffffff', lineWidth: 2 });
-                drawLandmarks(canvasContext, results.poseLandmarks,
-                    { color: COLORS.PLAYER, lineWidth: 1, radius: 4 });
+                drawConnectors(canvasContext, results.poseLandmarks, POSE_CONNECTIONS, { color: '#ffffff', lineWidth: 2 });
+                drawLandmarks(canvasContext, results.poseLandmarks, { color: COLORS.PLAYER, radius: 4 });
             }
-
-            // Restore the context to normal for drawing the UI/game objects that shouldn't be flipped
             canvasContext.restore();
-
-            // Game Loop Update
             if (gameState.isRunning) {
-                updateGameFrame();
-            }
-            
-            // FPS Counter
-            const now = performance.now();
-            const fps = Math.round(1000 / (now - gameState.lastFrameTime));
-            gameState.lastFrameTime = now;
-            document.getElementById('fps-counter').innerText = `FPS: ${fps}`;
-        });
-
-        function updateGameFrame() {
-            // Spawn logic
-            if (Math.random() < 0.02 * gameState.difficulty) {
-                gameState.targets.push(new GameTarget(gameState.gameMode));
-            }
-
-            // Update & Draw Targets
-            for (let i = gameState.targets.length - 1; i >= 0; i--) {
-                const target = gameState.targets[i];
-                const shouldRemove = target.update();
-                if (shouldRemove) {
-                    gameState.targets.splice(i, 1);
-                } else {
-                    target.draw(canvasContext);
+                if (Math.random() < 0.02 * gameState.difficulty) gameState.targets.push(new GameTarget(gameState.gameMode));
+                for (let i = gameState.targets.length - 1; i >= 0; i--) if (gameState.targets[i].update()) gameState.targets.splice(i, 1); else gameState.targets[i].draw(canvasContext);
+                for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                    const p = gameState.particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+                    if (p.life <= 0) gameState.particles.splice(i, 1);
+                    else { canvasContext.globalAlpha = p.life; canvasContext.fillStyle = p.color; canvasContext.beginPath(); canvasContext.arc(p.x, p.y, 3, 0, Math.PI * 2); canvasContext.fill(); }
                 }
+                canvasContext.globalAlpha = 1.0;
+                canvasContext.strokeStyle = 'rgba(255, 255, 255, 0.2)'; canvasContext.setLineDash([5, 5]); canvasContext.beginPath(); canvasContext.arc(canvasElement.width/2, canvasElement.height/2, 80, 0, Math.PI * 2); canvasContext.stroke(); canvasContext.setLineDash([]);
             }
-
-            // Update & Draw Particles
-            updateParticles();
-            gameState.particles.forEach(p => {
-                canvasContext.globalAlpha = p.life;
-                canvasContext.fillStyle = p.color;
-                canvasContext.beginPath();
-                canvasContext.arc(p.x, p.y, 3, 0, Math.PI * 2);
-                canvasContext.fill();
-            });
-            canvasContext.globalAlpha = 1.0;
-
-            // Draw "Soul" Center Point
-            canvasContext.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            canvasContext.setLineDash([5, 5]);
-            canvasContext.beginPath();
-            canvasContext.arc(canvasElement.width / 2, canvasElement.height / 2, 80, 0, Math.PI * 2);
-            canvasContext.stroke();
-            canvasContext.setLineDash([]);
-        }
-
-        /**
-         * CAMERA SETUP
-         */
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await pose.send({ image: videoElement });
-            },
-            width: 1280,
-            height: 720
+            const now = performance.now(); document.getElementById('fps-counter').innerText = `FPS: ${Math.round(1000 / (now - gameState.lastFrameTime))}`; gameState.lastFrameTime = now;
         });
 
-        // Handle camera ready state
-        camera.start().then(() => {
-            document.getElementById('loading-area').classList.add('hidden');
-            document.getElementById('start-controls').classList.remove('hidden');
-            document.getElementById('mode-display').innerText = "DOJO READY";
-        }).catch(err => {
-            document.getElementById('loading-text').innerText = "Camera Access Denied or Not Found.";
-            console.error(err);
-        });
-
-        // Resize listener
-        window.addEventListener('resize', () => {
-            canvasElement.width = window.innerWidth;
-            canvasElement.height = window.innerHeight;
-        });
-
+        const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({ image: videoElement }); }, width: 1280, height: 720 });
+        camera.start().then(() => { document.getElementById('loading-area').classList.add('hidden'); document.getElementById('start-controls').classList.remove('hidden'); document.getElementById('mode-display').innerText = "DOJO READY"; });
+        window.addEventListener('resize', () => { canvasElement.width = window.innerWidth; canvasElement.height = window.innerHeight; });
     </script>
+</body>
+</html>
 </body>
 </html>
