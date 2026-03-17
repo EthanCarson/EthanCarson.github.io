@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St. Paddy's 3D Face Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- MediaPipe Face Landmarker Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #022c22;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        /* Hidden video element used for tracking analysis */
+        #webcam-source-element {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            visibility: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        .interface-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem;
+            z-index: 100;
+        }
+        .interactive-element {
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <video id="webcam-source-element" autoplay playsinline></video>
+    <canvas id="three-dimensional-output-canvas"></canvas>
+
+    <div class="interface-overlay">
+        <!-- Application Header -->
+        <div class="bg-emerald-800/90 backdrop-blur-xl border-4 border-yellow-500 p-6 rounded-3xl shadow-[0_0_60px_rgba(234,179,8,0.4)] interactive-element">
+            <h1 class="text-4xl font-black text-yellow-400 text-center mb-1 tracking-tight">
+                ☘️ LUCK O' THE 3D ☘️
+            </h1>
+            <p class="text-emerald-100 text-center text-sm font-semibold uppercase tracking-widest opacity-80">
+                Augmented Irish Spirit
+            </p>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div id="loading-overlay" class="flex flex-col items-center transition-opacity duration-1000">
+            <div class="relative w-24 h-24 mb-6">
+                <div class="absolute inset-0 border-8 border-emerald-900 rounded-full"></div>
+                <div class="absolute inset-0 border-8 border-t-yellow-500 rounded-full animate-spin"></div>
+            </div>
+            <p class="text-yellow-200 font-mono text-xl tracking-widest uppercase animate-pulse">
+                Summoning Fairies...
+            </p>
+        </div>
+
+        <!-- Main Navigation -->
+        <div class="bg-emerald-950/90 p-5 rounded-full border-2 border-emerald-500/40 flex gap-8 interactive-element shadow-2xl backdrop-blur-md">
+            <button id="mode-selector-hat" class="flex items-center gap-3 px-10 py-4 bg-emerald-600 hover:bg-yellow-500 rounded-full transition-all duration-300 font-black text-lg shadow-inner group">
+                <span class="text-3xl group-hover:scale-125 transition-transform">🎩</span> 
+                <span>HAT</span>
+            </button>
+            <button id="mode-selector-clover" class="flex items-center gap-3 px-10 py-4 bg-emerald-600 hover:bg-yellow-500 rounded-full transition-all duration-300 font-black text-lg shadow-inner group">
+                <span class="text-3xl group-hover:rotate-45 transition-transform">🍀</span> 
+                <span>CLOVER</span>
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+
+        // --- Application Initialization and State ---
+        let faceLandmarkerInstance;
+        let isWebcamFeedReady = false;
+        let lastProcessedTimestamp = -1;
+        
+        const webcamVideoSource = document.getElementById("webcam-source-element");
+        const threeDimensionalCanvas = document.getElementById("three-dimensional-output-canvas");
+        const loadingOverlayElement = document.getElementById("loading-overlay");
+        
+        let threeDimensionalRenderer;
+        let threeDimensionalScene;
+        let threeDimensionalCamera;
+        
+        let leprechaunHatObjectGroup;
+        let luckyCloverObjectGroup;
+        let videoBackgroundTexture;
+        let videoBackgroundMesh;
+        
+        let activeAccessoryMode = 'hat'; 
+
+        /**
+         * Orchestrates the startup sequence of the application
+         */
+        async function startApplication() {
+            try {
+                // Initialize MediaPipe Face Landmarker via Fileset Resolver
+                const filesetResolver = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+                );
+                
+                faceLandmarkerInstance = await FaceLandmarker.createFromOptions(filesetResolver, {
+                    baseOptions: {
+                        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+                        delegate: "GPU"
+                    },
+                    outputFaceBlendshapes: true,
+                    runningMode: "VIDEO",
+                    numFaces: 1
+                });
+
+                initializeThreeDimensionalEnvironment();
+                await requestWebcamAccess();
+                
+                loadingOverlayElement.classList.add('opacity-0');
+                setTimeout(() => loadingOverlayElement.remove(), 1000);
+                
+                beginRenderingLoop();
+            } catch (initializationError) {
+                console.error("The application failed to initialize:", initializationError);
+            }
+        }
+
+        /**
+         * Sets up the Three.js scene, camera, and lighting
+         */
+        function initializeThreeDimensionalEnvironment() {
+            threeDimensionalScene = new THREE.Scene();
+            
+            threeDimensionalCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            threeDimensionalCamera.position.z = 10;
+            
+            threeDimensionalRenderer = new THREE.WebGLRenderer({ 
+                canvas: threeDimensionalCanvas, 
+                antialias: true, 
+                alpha: true 
+            });
+            threeDimensionalRenderer.setSize(window.innerWidth, window.innerHeight);
+            threeDimensionalRenderer.setPixelRatio(window.devicePixelRatio);
+
+            const globalAmbientLight = new THREE.AmbientLight(0xffffff, 0.9);
+            threeDimensionalScene.add(globalAmbientLight);
+            
+            const focusedDirectionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            focusedDirectionalLight.position.set(0, 5, 10);
+            threeDimensionalScene.add(focusedDirectionalLight);
+
+            generateLeprechaunHat();
+            generateLuckyClover();
+            
+            // Video Background Implementation
+            videoBackgroundTexture = new THREE.VideoTexture(webcamVideoSource);
+            videoBackgroundTexture.minFilter = THREE.LinearFilter;
+            
+            const backgroundPlaneGeometry = new THREE.PlaneGeometry(1, 1);
+            const backgroundPlaneMaterial = new THREE.MeshBasicMaterial({ map: videoBackgroundTexture });
+            videoBackgroundMesh = new THREE.Mesh(backgroundPlaneGeometry, backgroundPlaneMaterial);
+            
+            videoBackgroundMesh.position.z = -50; 
+            threeDimensionalScene.add(videoBackgroundMesh);
+
+            window.addEventListener('resize', onViewportResize);
+            onViewportResize();
+        }
+
+        function generateLeprechaunHat() {
+            leprechaunHatObjectGroup = new THREE.Group();
+            
+            const emeraldGreenMaterial = new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.4 });
+            const darkAccentMaterial = new THREE.MeshStandardMaterial({ color: 0x111827 });
+            const goldenBuckleMaterial = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8, roughness: 0.1 });
+
+            // Base Brim of the Hat
+            const brimGeometry = new THREE.CylinderGeometry(1.6, 1.6, 0.1, 64);
+            const brimMesh = new THREE.Mesh(brimGeometry, emeraldGreenMaterial);
+            leprechaunHatObjectGroup.add(brimMesh);
+
+            // Tall Body of the Hat
+            const bodyGeometry = new THREE.CylinderGeometry(1.0, 0.85, 1.6, 64);
+            const bodyMesh = new THREE.Mesh(bodyGeometry, emeraldGreenMaterial);
+            bodyMesh.position.y = 0.8;
+            leprechaunHatObjectGroup.add(bodyMesh);
+
+            // Decorative Ribbon around the Hat
+            const ribbonGeometry = new THREE.CylinderGeometry(0.87, 0.87, 0.35, 64);
+            const ribbonMesh = new THREE.Mesh(ribbonGeometry, darkAccentMaterial);
+            ribbonMesh.position.y = 0.25;
+            leprechaunHatObjectGroup.add(ribbonMesh);
+
+            // Golden Buckle Ornament
+            const buckleGeometry = new THREE.BoxGeometry(0.45, 0.4, 0.2);
+            const buckleMesh = new THREE.Mesh(buckleGeometry, goldenBuckleMaterial);
+            buckleMesh.position.set(0, 0.25, 0.9);
+            leprechaunHatObjectGroup.add(buckleMesh);
+
+            leprechaunHatObjectGroup.scale.set(0, 0, 0); 
+            threeDimensionalScene.add(leprechaunHatObjectGroup);
+        }
+
+        function generateLuckyClover() {
+            luckyCloverObjectGroup = new THREE.Group();
+            const cloverLeafMaterial = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.5 });
+            const leafPetalGeometry = new THREE.SphereGeometry(0.45, 32, 32);
+            leafPetalGeometry.scale(1, 0.3, 1.4); 
+
+            for(let petalIndex = 0; petalIndex < 4; petalIndex++) {
+                const petalMesh = new THREE.Mesh(leafPetalGeometry, cloverLeafMaterial);
+                const rotationAngle = (petalIndex * Math.PI) / 2;
+                petalMesh.position.set(Math.cos(rotationAngle) * 0.5, 0, Math.sin(rotationAngle) * 0.5);
+                petalMesh.rotation.y = rotationAngle;
+                luckyCloverObjectGroup.add(petalMesh);
+            }
+
+            const stemGeometry = new THREE.CylinderGeometry(0.08, 0.08, 1.5);
+            const stemMesh = new THREE.Mesh(stemGeometry, cloverLeafMaterial);
+            stemMesh.position.y = -0.7;
+            stemMesh.rotation.z = 0.3;
+            luckyCloverObjectGroup.add(stemMesh);
+
+            luckyCloverObjectGroup.scale.set(0, 0, 0);
+            threeDimensionalScene.add(luckyCloverObjectGroup);
+        }
+
+        async function requestWebcamAccess() {
+            const mediaConstraints = { 
+                video: { 
+                    width: { ideal: 1280 }, 
+                    height: { ideal: 720 },
+                    facingMode: "user"
+                } 
+            };
+            
+            const webcamStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+            webcamVideoSource.srcObject = webcamStream;
+            
+            return new Promise((resolve) => {
+                webcamVideoSource.onloadedmetadata = () => {
+                    webcamVideoSource.play();
+                    isWebcamFeedReady = true;
+                    resolve();
+                };
+            });
+        }
+
+        function onViewportResize() {
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            threeDimensionalCamera.aspect = viewportWidth / viewportHeight;
+            threeDimensionalCamera.updateProjectionMatrix();
+            threeDimensionalRenderer.setSize(viewportWidth, viewportHeight);
+
+            // Adjust background video plane to cover the screen dimensions
+            const frustumHeightAtDistance = 2 * Math.tan((threeDimensionalCamera.fov * Math.PI / 180) / 2) * Math.abs(videoBackgroundMesh.position.z);
+            const videoAspectRatio = 16 / 9;
+            let calculatedMeshWidth, calculatedMeshHeight;
+            
+            if (threeDimensionalCamera.aspect > videoAspectRatio) {
+                calculatedMeshWidth = frustumHeightAtDistance * threeDimensionalCamera.aspect;
+                calculatedMeshHeight = calculatedMeshWidth / videoAspectRatio;
+            } else {
+                calculatedMeshHeight = frustumHeightAtDistance;
+                calculatedMeshWidth = frustumHeightAtDistance * videoAspectRatio;
+            }
+            
+            videoBackgroundMesh.scale.set(calculatedMeshWidth, calculatedMeshHeight, 1);
+        }
+
+        function beginRenderingLoop() {
+            if (webcamVideoSource.currentTime !== lastProcessedTimestamp) {
+                lastProcessedTimestamp = webcamVideoSource.currentTime;
+                
+                const faceLandmarkerResults = faceLandmarkerInstance.detectForVideo(webcamVideoSource, performance.now());
+                
+                if (faceLandmarkerResults.faceLandmarks && faceLandmarkerResults.faceLandmarks.length > 0) {
+                    mapThreeDimensionalObjectsToFace(faceLandmarkerResults.faceLandmarks[0]);
+                } else {
+                    // Hide objects if no face is detected
+                    leprechaunHatObjectGroup.scale.lerp(new THREE.Vector3(0, 0, 0), 0.1);
+                    luckyCloverObjectGroup.scale.lerp(new THREE.Vector3(0, 0, 0), 0.1);
+                }
+            }
+
+            if (activeAccessoryMode === 'clover') {
+                luckyCloverObjectGroup.rotation.y += 0.05;
+            }
+
+            threeDimensionalRenderer.render(threeDimensionalScene, threeDimensionalCamera);
+            requestAnimationFrame(beginRenderingLoop);
+        }
+
+        /**
+         * Logic to align 3D objects with the top of the head and correct mirroring
+         */
+        function mapThreeDimensionalObjectsToFace(faceLandmarks) {
+            // Reference Landmarks:
+            // 10: Top of forehead (Hairline center)
+            // 1: Nose tip
+            // 33: Left eye outer
+            // 263: Right eye outer
+            const noseTipLandmark = faceLandmarks[1];
+            const foreheadLandmark = faceLandmarks[10];
+            const leftEyeLandmark = faceLandmarks[33];
+            const rightEyeLandmark = faceLandmarks[263];
+
+            // 1. Scene Dimension Calculations at fixed depth
+            const trackingZPlane = 5; 
+            const cameraDistanceToPlane = Math.abs(threeDimensionalCamera.position.z - trackingZPlane);
+            const verticalViewHeight = 2 * Math.tan((threeDimensionalCamera.fov * Math.PI / 180) / 2) * cameraDistanceToPlane;
+            const horizontalViewWidth = verticalViewHeight * threeDimensionalCamera.aspect;
+
+            // 2. Mirroring Correction:
+            // Changed from (0.5 - x) to (x - 0.5) to match the movement relative to a standard webcam mirror perception.
+            const worldForeheadX = (foreheadLandmark.x - 0.5) * horizontalViewWidth;
+            const worldForeheadY = (0.5 - foreheadLandmark.y) * verticalViewHeight;
+
+            // 3. Scaling logic based on eye distance
+            const ocularDistance = Math.sqrt(
+                Math.pow(rightEyeLandmark.x - leftEyeLandmark.x, 2) + 
+                Math.pow(rightEyeLandmark.y - leftEyeLandmark.y, 2)
+            );
+            
+            // Large scale for clear visibility as requested
+            const globalObjectScale = ocularDistance * (horizontalViewWidth * 0.95);
+
+            // 4. Orientation (Roll and Yaw)
+            const rollAngle = Math.atan2(rightEyeLandmark.y - leftEyeLandmark.y, rightEyeLandmark.x - leftEyeLandmark.x);
+            // Yaw approximation adjusted for mirroring
+            const yawAngle = (noseTipLandmark.x - (leftEyeLandmark.x + rightEyeLandmark.x) / 2) * 2;
+
+            // 5. Final Transformation Application
+            if (activeAccessoryMode === 'hat') {
+                // Anchored to top of head (hairline)
+                const hatAnchorY = worldForeheadY + (globalObjectScale * 0.1);
+                leprechaunHatObjectGroup.position.lerp(new THREE.Vector3(worldForeheadX, hatAnchorY, trackingZPlane), 0.4);
+                leprechaunHatObjectGroup.rotation.set(0.15, yawAngle, -rollAngle);
+                leprechaunHatObjectGroup.scale.lerp(new THREE.Vector3(globalObjectScale, globalObjectScale, globalObjectScale), 0.2);
+                
+                luckyCloverObjectGroup.scale.set(0, 0, 0);
+            } else {
+                // Clover also anchored to top of head (hairline)
+                const cloverAnchorY = worldForeheadY + (globalObjectScale * 0.3);
+                luckyCloverObjectGroup.position.lerp(new THREE.Vector3(worldForeheadX, cloverAnchorY, trackingZPlane), 0.4);
+                luckyCloverObjectGroup.rotation.set(0, yawAngle, -rollAngle);
+                luckyCloverObjectGroup.scale.lerp(new THREE.Vector3(globalObjectScale * 0.9, globalObjectScale * 0.9, globalObjectScale * 0.9), 0.2);
+                
+                leprechaunHatObjectGroup.scale.set(0, 0, 0);
+            }
+        }
+
+        // --- User Interface Interaction Handlers ---
+        document.getElementById('mode-selector-hat').onclick = () => {
+            activeAccessoryMode = 'hat';
+        };
+        document.getElementById('mode-selector-clover').onclick = () => {
+            activeAccessoryMode = 'clover';
+        };
+
+        // Execution Entry Point
+        window.addEventListener('load', startApplication);
+    </script>
+</body>
+</html>
