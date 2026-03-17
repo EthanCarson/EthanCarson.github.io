@@ -314,10 +314,10 @@
         }
 
         /**
-         * Transforms raw AI landmark data into 3D space with accurate head-top alignment
+         * Transforms raw AI landmark data into 3D space with accurate head-top alignment and rotation tracking
          */
         function processFaceTrackingFrame(faceLandmarkPoints) {
-            // High-Value Landmarks:
+            // Essential Landmarks:
             // 10: Top center of the forehead (Hairline)
             // 1: Center tip of the nose
             // 33: Outer corner of the left eye
@@ -334,7 +334,6 @@
             const visibleHorizontalSpan = visibleVerticalSpan * globalThreeDimensionalCamera.aspect;
 
             // 2. Map coordinates with Mirror Correction:
-            // (landmarks.x - 0.5) ensures movement follows standard mirrored webcam expectations
             const headHorizontalWorldPosition = (foreheadTopLandmark.x - 0.5) * visibleHorizontalSpan;
             const headVerticalWorldPosition = (0.5 - foreheadTopLandmark.y) * visibleVerticalSpan;
 
@@ -346,25 +345,28 @@
             
             const calculatedAccessoryScale = interocularDistanceInPixels * (visibleHorizontalSpan * 0.95);
 
-            // 4. Orientation Calculation (Roll and Yaw)
+            // 4. Orientation Calculation (Pitch, Yaw, Roll)
+            // side-to-side tilt
             const headRollRadian = Math.atan2(rightEyeOuterLandmark.y - leftEyeOuterLandmark.y, rightEyeOuterLandmark.x - leftEyeOuterLandmark.x);
+            // horizontal rotation
             const headYawApproximation = (noseTipLandmark.x - (leftEyeOuterLandmark.x + rightEyeOuterLandmark.x) / 2) * 2;
+            // forward/backward tilt
+            const headPitchApproximation = (noseTipLandmark.y - (leftEyeOuterLandmark.y + rightEyeOuterLandmark.y) / 2) * 4;
 
             // 5. Asset Application logic
             if (currentActiveAugmentationMode === 'hat') {
-                // Place the hat slightly above the forehead landmark for a natural fit
+                // Anchored to hairline with dynamic pitch tilt
                 const hatPlacementY = headVerticalWorldPosition + (calculatedAccessoryScale * 0.1);
                 leprechaunHatGroupContainer.position.lerp(new THREE.Vector3(headHorizontalWorldPosition, hatPlacementY, activeDepthPlane), 0.45);
-                leprechaunHatGroupContainer.rotation.set(0.15, headYawApproximation, -headRollRadian);
+                leprechaunHatGroupContainer.rotation.set(headPitchApproximation, headYawApproximation, -headRollRadian);
                 leprechaunHatGroupContainer.scale.lerp(new THREE.Vector3(calculatedAccessoryScale, calculatedAccessoryScale, calculatedAccessoryScale), 0.25);
                 
                 luckyCloverGroupContainer.scale.set(0, 0, 0);
             } else {
-                // MOVE CLOVER SIGNIFICANTLY UP: Anchored so that the bottom of the stem sits at the hairline.
-                // Adjusted multiplier to 1.45 to ensure the clover's bottom is aligned with the top of the head.
+                // Aligned so that the bottom of the stem sits at the hairline, with dynamic pitch tilt
                 const cloverPlacementY = headVerticalWorldPosition + (calculatedAccessoryScale * 1.45);
                 luckyCloverGroupContainer.position.lerp(new THREE.Vector3(headHorizontalWorldPosition, cloverPlacementY, activeDepthPlane), 0.45);
-                luckyCloverGroupContainer.rotation.set(0, headYawApproximation, -headRollRadian);
+                luckyCloverGroupContainer.rotation.set(headPitchApproximation, headYawApproximation, -headRollRadian);
                 luckyCloverGroupContainer.scale.lerp(new THREE.Vector3(calculatedAccessoryScale * 0.9, calculatedAccessoryScale * 0.9, calculatedAccessoryScale * 0.9), 0.25);
                 
                 leprechaunHatGroupContainer.scale.set(0, 0, 0);
@@ -383,5 +385,7 @@
         // Initialize on page load
         window.addEventListener('load', runApplicationInitialization);
     </script>
+</body>
+</html>
 </body>
 </html>
