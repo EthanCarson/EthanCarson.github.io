@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Dojo: Kinetic Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MediaPipe Pose Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rajdhani:wght@500;700&display=swap');
+
+        :root {
+            --dojo-red: #ff4d4d;
+            --dojo-gold: #ffd700;
+            --dojo-blue: #00d4ff;
+        }
+
+        body {
+            background-color: #0a0a0c;
+            color: #ffffff;
+            font-family: 'Rajdhani', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .title-font {
+            font-family: 'Permanent Marker', cursive;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Video is hidden but used for tracking */
+        #input-video {
+            display: none;
+        }
+
+        #output-canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.6) contrast(1.2);
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .health-bar-container {
+            width: 300px;
+            height: 20px;
+            background: #222;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #444;
+        }
+
+        #health-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--dojo-red), #ff9999);
+            transition: width 0.3s ease;
+        }
+
+        .flash-red {
+            animation: flash 0.5s infinite;
+        }
+
+        @keyframes flash {
+            0% { background-color: rgba(255, 77, 77, 0); }
+            50% { background-color: rgba(255, 77, 77, 0.3); }
+            100% { background-color: rgba(255, 77, 77, 0); }
+        }
+
+        .menu-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--dojo-gold);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        button {
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- Input Video (Hidden) -->
+        <video id="input-video" playsinline></video>
+        
+        <!-- Game Display -->
+        <canvas id="output-canvas"></canvas>
+
+        <!-- UI Overlay -->
+        <div class="ui-overlay">
+            <div class="status-bar">
+                <div class="flex flex-col gap-2">
+                    <div class="title-font text-3xl text-yellow-400 tracking-wider">SHADOW DOJO</div>
+                    <div class="flex items-center gap-4">
+                        <div class="health-bar-container">
+                            <div id="health-fill"></div>
+                        </div>
+                        <span id="score-display" class="text-2xl font-bold">SCORE: 0</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end">
+                    <div id="mode-display" class="text-xl font-bold text-blue-400">LOADING CAMERA...</div>
+                    <div id="fps-counter" class="text-xs text-gray-500">FPS: --</div>
+                </div>
+            </div>
+            
+            <div id="damage-overlay" class="absolute inset-0 pointer-events-none"></div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="menu-screen" class="menu-screen">
+            <h1 class="title-font text-7xl mb-2 text-yellow-500 text-center">KINETIC MASTER</h1>
+            <p class="text-gray-400 mb-8 max-w-md text-center">Inspired by the "Way of the Warrior", but powered by AI. Use your body to strike targets and avoid obstacles.</p>
+            
+            <div id="loading-area" class="flex flex-col items-center gap-4">
+                <div class="loading-spinner"></div>
+                <p id="loading-text">Initializing Pose Tracking...</p>
+            </div>
+
+            <div id="start-controls" class="hidden flex flex-col gap-4 w-full max-w-xs interactive">
+                <button onclick="startGame('strike')" class="bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg uppercase tracking-widest border-b-4 border-red-800">
+                    Spirit Strike Mode
+                </button>
+                <button onclick="startGame('reflex')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg uppercase tracking-widest border-b-4 border-blue-800">
+                    Guardian Reflex Mode
+                </button>
+                <p class="text-xs text-gray-500 text-center mt-4">Stand back so your whole body is visible.</p>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="menu-screen hidden">
+            <h1 class="title-font text-7xl mb-2 text-red-500">DEFEATED</h1>
+            <p id="final-score" class="text-3xl mb-8">FINAL SCORE: 0</p>
+            <button onclick="location.reload()" class="interactive bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg">
+                RETURN TO DOJO
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * GLOBAL CONFIGURATION AND STATE
+         */
+        const videoElement = document.getElementById('input-video');
+        const canvasElement = document.getElementById('output-canvas');
+        const canvasContext = canvasElement.getContext('2d');
+        const healthFill = document.getElementById('health-fill');
+        const scoreDisplay = document.getElementById('score-display');
+        const menuScreen = document.getElementById('menu-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const damageOverlay = document.getElementById('damage-overlay');
+
+        let gameState = {
+            isRunning: false,
+            score: 0,
+            health: 100,
+            gameMode: 'strike', // 'strike' or 'reflex'
+            targets: [],
+            particles: [],
+            lastFrameTime: 0,
+            frameDelta: 0,
+            difficulty: 1.0,
+            poseLandmarks: null
+        };
+
+        const COLORS = {
+            ENEMY: '#ff4d4d',
+            FRIEND: '#00d4ff',
+            PLAYER: '#ffd700',
+            PARTICLE: '#ffffff'
+        };
+
+        /**
+         * TARGET CLASS
+         * Represents enemies or friendly objects flying toward the user
+         */
+        class GameTarget {
+            constructor(mode) {
+                this.radius = 40 + (Math.random() * 20);
+                this.isFriendly = (mode === 'reflex' && Math.random() > 0.7);
+                
+                // Spawn from edges
+                const side = Math.floor(Math.random() * 4);
+                if (side === 0) { // Top
+                    this.x = Math.random() * canvasElement.width;
+                    this.y = -this.radius;
+                } else if (side === 1) { // Right
+                    this.x = canvasElement.width + this.radius;
+                    this.y = Math.random() * canvasElement.height;
+                } else if (side === 2) { // Bottom
+                    this.x = Math.random() * canvasElement.width;
+                    this.y = canvasElement.height + this.radius;
+                } else { // Left
+                    this.x = -this.radius;
+                    this.y = Math.random() * canvasElement.height;
+                }
+
+                // Move toward center with some randomness
+                const centerX = canvasElement.width / 2;
+                const centerY = canvasElement.height / 2;
+                const angle = Math.atan2(centerY - this.y, centerX - this.x);
+                const speed = (2 + Math.random() * 3) * gameState.difficulty;
+                
+                this.velocityX = Math.cos(angle) * speed;
+                this.velocityY = Math.sin(angle) * speed;
+                
+                this.pulsate = 0;
+                this.isHit = false;
+            }
+
+            update() {
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+                this.pulsate += 0.1;
+
+                // Check if it reached the center area (the user's "soul")
+                const dx = this.x - (canvasElement.width / 2);
+                const dy = this.y - (canvasElement.height / 2);
+                const distanceToCenter = Math.sqrt(dx * dx + dy * dy);
+
+                if (distanceToCenter < 100 && !this.isHit) {
+                    if (!this.isFriendly) {
+                        applyDamage(15);
+                    }
+                    this.isHit = true;
+                    return true; // Mark for removal
+                }
+
+                // Check collision with hands/feet
+                if (gameState.poseLandmarks) {
+                    // Check Left Hand (Index 15/16), Right Hand (Index 19/20), etc.
+                    const strikePoints = [15, 16, 19, 20, 31, 32]; // Wrists/Hands + Feet
+                    for (let index of strikePoints) {
+                        const landmark = gameState.poseLandmarks[index];
+                        
+                        // NOTE: Because we mirror the canvas for drawing, we must mirror the landmark X coordinate 
+                        // for collision logic since landmarks are extracted from the raw video (which is not mirrored).
+                        const mirroredX = 1 - landmark.x; 
+                        const px = mirroredX * canvasElement.width;
+                        const py = landmark.y * canvasElement.height;
+                        
+                        const strikeDist = Math.sqrt(Math.pow(this.x - px, 2) + Math.pow(this.y - py, 2));
+                        if (strikeDist < this.radius + 25) {
+                            this.handleStrike();
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            handleStrike() {
+                this.isHit = true;
+                if (this.isFriendly) {
+                    applyDamage(20);
+                    spawnExplosion(this.x, this.y, COLORS.FRIEND);
+                } else {
+                    gameState.score += 10;
+                    scoreDisplay.innerText = `SCORE: ${gameState.score}`;
+                    spawnExplosion(this.x, this.y, COLORS.ENEMY);
+                    gameState.difficulty += 0.01;
+                }
+            }
+
+            draw(ctx) {
+                const glow = 10 + Math.sin(this.pulsate) * 5;
+                ctx.save();
+                ctx.shadowBlur = glow;
+                ctx.shadowColor = this.isFriendly ? COLORS.FRIEND : COLORS.ENEMY;
+                ctx.fillStyle = this.isFriendly ? COLORS.FRIEND : COLORS.ENEMY;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner detail
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        /**
+         * PARTICLE SYSTEM
+         */
+        function spawnExplosion(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                gameState.particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const p = gameState.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                if (p.life <= 0) gameState.particles.splice(i, 1);
+            }
+        }
+
+        /**
+         * GAME LOGIC FUNCTIONS
+         */
+        function applyDamage(amount) {
+            gameState.health -= amount;
+            if (gameState.health < 0) gameState.health = 0;
+            healthFill.style.width = `${gameState.health}%`;
+            
+            // Visual feedback
+            damageOverlay.classList.add('flash-red');
+            setTimeout(() => damageOverlay.classList.remove('flash-red'), 300);
+
+            if (gameState.health <= 0) {
+                endGame();
+            }
+        }
+
+        function startGame(mode) {
+            gameState.isRunning = true;
+            gameState.score = 0;
+            gameState.health = 100;
+            gameState.gameMode = mode;
+            gameState.targets = [];
+            gameState.particles = [];
+            gameState.difficulty = 1.0;
+            
+            scoreDisplay.innerText = `SCORE: 0`;
+            healthFill.style.width = `100%`;
+            document.getElementById('mode-display').innerText = mode.toUpperCase() + " MODE";
+            
+            menuScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+        }
+
+        function endGame() {
+            gameState.isRunning = false;
+            document.getElementById('final-score').innerText = `FINAL SCORE: ${gameState.score}`;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        /**
+         * MEDIAPIPE INITIALIZATION
+         */
+        const pose = new Pose({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+            }
+        });
+
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        pose.onResults((results) => {
+            // Update Canvas Size to match window
+            if (canvasElement.width !== window.innerWidth || canvasElement.height !== window.innerHeight) {
+                canvasElement.width = window.innerWidth;
+                canvasElement.height = window.innerHeight;
+            }
+
+            gameState.poseLandmarks = results.poseLandmarks;
+
+            // Clear Background
+            canvasContext.save();
+            canvasContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // MIRROR EFFECT:
+            // Translate to the right edge and scale X by -1 to flip the drawing horizontally
+            canvasContext.translate(canvasElement.width, 0);
+            canvasContext.scale(-1, 1);
+            
+            // Draw Video Frame as backdrop (now mirrored)
+            canvasContext.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            // Draw Skeleton Visualization (now mirrored because of the context transformation)
+            if (results.poseLandmarks) {
+                drawConnectors(canvasContext, results.poseLandmarks, POSE_CONNECTIONS,
+                    { color: '#ffffff', lineWidth: 2 });
+                drawLandmarks(canvasContext, results.poseLandmarks,
+                    { color: COLORS.PLAYER, lineWidth: 1, radius: 4 });
+            }
+
+            // Restore the context to normal for drawing the UI/game objects that shouldn't be flipped
+            canvasContext.restore();
+
+            // Game Loop Update
+            if (gameState.isRunning) {
+                updateGameFrame();
+            }
+            
+            // FPS Counter
+            const now = performance.now();
+            const fps = Math.round(1000 / (now - gameState.lastFrameTime));
+            gameState.lastFrameTime = now;
+            document.getElementById('fps-counter').innerText = `FPS: ${fps}`;
+        });
+
+        function updateGameFrame() {
+            // Spawn logic
+            if (Math.random() < 0.02 * gameState.difficulty) {
+                gameState.targets.push(new GameTarget(gameState.gameMode));
+            }
+
+            // Update & Draw Targets
+            for (let i = gameState.targets.length - 1; i >= 0; i--) {
+                const target = gameState.targets[i];
+                const shouldRemove = target.update();
+                if (shouldRemove) {
+                    gameState.targets.splice(i, 1);
+                } else {
+                    target.draw(canvasContext);
+                }
+            }
+
+            // Update & Draw Particles
+            updateParticles();
+            gameState.particles.forEach(p => {
+                canvasContext.globalAlpha = p.life;
+                canvasContext.fillStyle = p.color;
+                canvasContext.beginPath();
+                canvasContext.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                canvasContext.fill();
+            });
+            canvasContext.globalAlpha = 1.0;
+
+            // Draw "Soul" Center Point
+            canvasContext.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            canvasContext.setLineDash([5, 5]);
+            canvasContext.beginPath();
+            canvasContext.arc(canvasElement.width / 2, canvasElement.height / 2, 80, 0, Math.PI * 2);
+            canvasContext.stroke();
+            canvasContext.setLineDash([]);
+        }
+
+        /**
+         * CAMERA SETUP
+         */
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await pose.send({ image: videoElement });
+            },
+            width: 1280,
+            height: 720
+        });
+
+        // Handle camera ready state
+        camera.start().then(() => {
+            document.getElementById('loading-area').classList.add('hidden');
+            document.getElementById('start-controls').classList.remove('hidden');
+            document.getElementById('mode-display').innerText = "DOJO READY";
+        }).catch(err => {
+            document.getElementById('loading-text').innerText = "Camera Access Denied or Not Found.";
+            console.error(err);
+        });
+
+        // Resize listener
+        window.addEventListener('resize', () => {
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+        });
+
+    </script>
+</body>
+</html>
