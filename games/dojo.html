@@ -6,7 +6,6 @@
     <title>Shadow Dojo: Face Defense</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- MediaPipe Pose Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
@@ -147,6 +146,10 @@
 <body>
 
     <div id="game-container">
+        <audio id="bg-music" loop>
+            <source src="https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3" type="audio/mpeg">
+        </audio>
+
         <video id="input-video" playsinline></video>
         <canvas id="output-canvas"></canvas>
 
@@ -169,7 +172,6 @@
             <div id="flash-overlay" class="absolute inset-0 pointer-events-none"></div>
         </div>
 
-        <!-- Start Screen -->
         <div id="menu-screen" class="menu-screen">
             <h1 class="title-font text-7xl mb-2 text-yellow-500 text-center">FACE DEFENSE</h1>
             <div class="glass-panel p-6 text-center max-w-lg mb-8">
@@ -199,7 +201,6 @@
             </div>
         </div>
 
-        <!-- Game Over Screen -->
         <div id="game-over-screen" class="menu-screen hidden">
             <h1 class="title-font text-6xl mb-2 text-red-500">DEFENSE BREACHED</h1>
             <p id="final-score" class="text-2xl mb-4">FINAL SCORE: 0</p>
@@ -222,20 +223,19 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDaQDHVELYHyCIgRntocA7HUS7V0XLt980",
-  authDomain: "dojo-236be.firebaseapp.com",
-  projectId: "dojo-236be",
-  storageBucket: "dojo-236be.firebasestorage.app",
-  messagingSenderId: "828828279034",
-  appId: "1:828828279034:web:2abbdaf35d5287dea72943"
-};
+        const firebaseConfig = {
+          apiKey: "AIzaSyDaQDHVELYHyCIgRntocA7HUS7V0XLt980",
+          authDomain: "dojo-236be.firebaseapp.com",
+          projectId: "dojo-236be",
+          storageBucket: "dojo-236be.firebasestorage.app",
+          messagingSenderId: "828828279034",
+          appId: "1:828828279034:web:2abbdaf35d5287dea72943"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -290,9 +290,6 @@ const firebaseConfig = {
     </script>
 
     <script>
-        /**
-         * GAME ENGINE - STRATEGIC MIX-UP LOGIC
-         */
         const videoElement = document.getElementById('input-video');
         const canvasElement = document.getElementById('output-canvas');
         const canvasContext = canvasElement.getContext('2d');
@@ -301,6 +298,7 @@ const firebaseConfig = {
         const menuScreen = document.getElementById('menu-screen');
         const gameOverScreen = document.getElementById('game-over-screen');
         const flashOverlay = document.getElementById('flash-overlay');
+        const bgMusic = document.getElementById('bg-music');
 
         let gameState = {
             isRunning: false,
@@ -320,7 +318,7 @@ const firebaseConfig = {
         class GameTarget {
             constructor() {
                 this.radius = 35 + (Math.random() * 15);
-                this.isFragile = Math.random() > 0.75; // Blue ones are Fragile Spirits
+                this.isFragile = Math.random() > 0.75; 
                 
                 const side = Math.floor(Math.random() * 4);
                 if (side === 0) { this.x = Math.random() * canvasElement.width; this.y = -this.radius; }
@@ -333,29 +331,24 @@ const firebaseConfig = {
             }
 
             update() {
-                // HOMING: Head toward face
                 const angleToFace = Math.atan2(gameState.faceTargetY - this.y, gameState.faceTargetX - this.x);
                 this.x += Math.cos(angleToFace) * this.speed;
                 this.y += Math.sin(angleToFace) * this.speed;
 
-                // FACE INTERACTION
                 const distanceToFaceCenter = Math.sqrt(Math.pow(this.x - gameState.faceTargetX, 2) + Math.pow(this.y - gameState.faceTargetY, 2));
                 if (distanceToFaceCenter < this.radius + 30 && !this.isDeactivated) {
                     this.isDeactivated = true;
                     if (this.isFragile) {
-                        // CATCH BLUE: Reward points
                         gameState.score += 25;
                         scoreDisplay.innerText = `SCORE: ${gameState.score}`;
                         this.triggerEffect(COLORS.BLUE);
                     } else {
-                        // HIT BY RED: Take damage
                         applyDamage(15);
                         this.triggerEffect(COLORS.RED);
                     }
                     return true;
                 }
 
-                // STRIKE INTERACTION (Hands/Feet)
                 if (gameState.poseLandmarks) {
                     const strikePoints = [15, 16, 19, 20, 31, 32];
                     for (let pointId of strikePoints) {
@@ -367,11 +360,9 @@ const firebaseConfig = {
                         if (distanceToStrike < this.radius + 30) {
                             this.isDeactivated = true;
                             if (this.isFragile) {
-                                // STRIKE BLUE: Penalty (It's fragile and shouldn't be broken)
                                 applyDamage(20);
                                 this.triggerEffect(COLORS.PURPLE);
                             } else {
-                                // STRIKE RED: Reward points
                                 gameState.score += 10;
                                 scoreDisplay.innerText = `SCORE: ${gameState.score}`;
                                 gameState.difficulty += 0.008;
@@ -404,10 +395,9 @@ const firebaseConfig = {
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Ring effect
                 ctx.strokeStyle = 'rgba(255,255,255,0.7)';
                 ctx.lineWidth = 2;
-                ctx.setLineDash(this.isFragile ? [5, 5] : []); // Dashed for fragile
+                ctx.setLineDash(this.isFragile ? [5, 5] : []); 
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
                 ctx.stroke();
@@ -441,12 +431,21 @@ const firebaseConfig = {
             gameState.difficulty = 1.0;
             scoreDisplay.innerText = "SCORE: 0";
             updateHealthBar();
+            
+            // Audio Playback
+            bgMusic.currentTime = 0;
+            bgMusic.play().catch(e => console.log("Audio playback failed:", e));
+
             menuScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
         }
 
         function endGame() {
             gameState.isRunning = false;
+            
+            // Audio Stop
+            bgMusic.pause();
+
             document.getElementById('final-score').innerText = `FINAL SCORE: ${gameState.score}`;
             gameOverScreen.classList.remove('hidden');
             if (typeof fetchLeaderboard === "function") fetchLeaderboard();
@@ -463,7 +462,6 @@ const firebaseConfig = {
             
             gameState.poseLandmarks = results.poseLandmarks;
             
-            // TRACK NOSE FOR FACE POSITION
             if (results.poseLandmarks) {
                 const noseLandmark = results.poseLandmarks[0];
                 gameState.faceTargetX = (1 - noseLandmark.x) * canvasElement.width;
@@ -476,12 +474,10 @@ const firebaseConfig = {
             canvasContext.save();
             canvasContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
             
-            // Mirrored Feed
             canvasContext.translate(canvasElement.width, 0);
             canvasContext.scale(-1, 1);
             canvasContext.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             
-            // Skeleton Visuals
             if (results.poseLandmarks) {
                 drawConnectors(canvasContext, results.poseLandmarks, POSE_CONNECTIONS, { color: 'rgba(255,255,255,0.5)', lineWidth: 1 });
                 drawLandmarks(canvasContext, results.poseLandmarks, { color: COLORS.PLAYER, radius: 2 });
@@ -489,10 +485,8 @@ const firebaseConfig = {
             canvasContext.restore();
 
             if (gameState.isRunning) {
-                // Spawning
                 if (Math.random() < 0.02 * gameState.difficulty) gameState.targets.push(new GameTarget());
                 
-                // Targets
                 for (let i = gameState.targets.length - 1; i >= 0; i--) {
                     if (gameState.targets[i].update()) {
                         gameState.targets.splice(i, 1);
@@ -501,7 +495,6 @@ const firebaseConfig = {
                     }
                 }
                 
-                // Particles
                 for (let i = gameState.particles.length - 1; i >= 0; i--) {
                     const particle = gameState.particles[i];
                     particle.x += particle.vx;
@@ -519,7 +512,6 @@ const firebaseConfig = {
                 }
                 canvasContext.globalAlpha = 1.0;
 
-                // Face Reticle
                 canvasContext.strokeStyle = COLORS.PLAYER;
                 canvasContext.lineWidth = 2;
                 canvasContext.setLineDash([10, 5]);
