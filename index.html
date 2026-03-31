@@ -112,7 +112,6 @@
 
       <!-- Right Column: Navigation / Data Structure -->
       <div class="interactive w-full md:w-96 flex flex-col gap-6">
-        <!-- Changed h-full to h-fit to ensure the graphical bounds wrap the entire content dynamically -->
         <div class="glass rounded-2xl p-8 shadow-2xl h-fit">
           <h3 class="text-2xl font-bold text-white mb-2">Directory</h3>
           <p class="text-sm text-slate-400 mb-6">
@@ -148,7 +147,7 @@
 
     <script>
       // ==========================================
-      // CONFIGURATION DATA (EASILY EDITABLE)
+      // CONFIGURATION DATA
       // ==========================================
 
       const siteData = {
@@ -174,7 +173,6 @@
           { title: "Audio Editing", icon: "🎧" },
           { title: "Video Editing & Post", icon: "🎬" },
         ],
-        // Data structure representing folders and paths
         navigationTree: [
           {
             categoryName: "Configuration",
@@ -249,14 +247,12 @@
           folderDiv.className =
             "bg-slate-900/50 rounded-lg border border-slate-800 overflow-hidden";
 
-          // Folder Header
           const folderHeader = document.createElement("div");
           folderHeader.className =
             "px-4 py-3 bg-slate-800/50 text-indigo-300 font-semibold flex items-center gap-2";
           folderHeader.innerHTML = `<svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> /${category.pathSegment}`;
           folderDiv.appendChild(folderHeader);
 
-          // Folder Items
           const list = document.createElement("ul");
           list.className = "p-2 space-y-1";
           category.selections.forEach((item) => {
@@ -266,11 +262,10 @@
               "w-full text-left px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-indigo-500/20 rounded-md transition-all flex items-center gap-2 group";
             btn.innerHTML = `<span class="text-slate-600 group-hover:text-indigo-400 transition-colors">↳</span> ${item.name}`;
 
-            // The core requirement: constructing the URL path
             btn.onclick = () => {
               const generatedUrlPath = `/${category.pathSegment}/${item.slug}`;
               const fullUrl = `${siteData.baseUrl}${generatedUrlPath}`;
-              handleNavigationSimulation(generatedUrlPath, fullUrl);
+              handleNavigation(fullUrl);
             };
 
             li.appendChild(btn);
@@ -282,23 +277,21 @@
         });
       }
 
-      function handleNavigationSimulation(path, fullUrl) {
-        // In a real app, you might do window.location.href = path;
-        // For this single-page demo, we show a sleek message box
+      function handleNavigation(fullUrl) {
         const msgBox = document.getElementById("message-box");
         const msgText = document.getElementById("message-text");
 
-        msgText.innerHTML = `Constructed Route: <br/><span class="text-indigo-300 font-mono text-xs">${fullUrl}</span><br/>Navigating...`;
-
+        msgText.innerHTML = `Navigating to: <br/><span class="text-indigo-300 font-mono text-xs">${fullUrl}</span>`;
         msgBox.classList.remove("translate-y-24", "opacity-0");
 
+        // Small delay to let the user see the path before actually navigating
         setTimeout(() => {
-          msgBox.classList.add("translate-y-24", "opacity-0");
-        }, 3500);
+          window.location.href = fullUrl;
+        }, 1000);
       }
 
       // ==========================================
-      // THREE.JS 3D SCENE & AVATAR GENERATION
+      // THREE.JS 3D SCENE
       // ==========================================
 
       let scene, camera, renderer, avatarGroup, particlesMesh;
@@ -307,270 +300,70 @@
 
       function initThreeJS() {
         const container = document.getElementById("canvas-container");
-
-        // 1. Scene Setup
         scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x0f172a, 0.04);
-
-        // 2. Camera Setup
-        camera = new THREE.PerspectiveCamera(
-          60,
-          window.innerWidth / window.innerHeight,
-          0.1,
-          1000,
-        );
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 2, 8);
-
-        // 3. Renderer Setup
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        // 4. Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
+        const p1 = new THREE.PointLight(0x6366f1, 2, 50);
+        p1.position.set(5, 5, 5);
+        scene.add(p1);
+        const p2 = new THREE.PointLight(0xec4899, 1.5, 50);
+        p2.position.set(-5, 3, -5);
+        scene.add(p2);
 
-        const pointLight1 = new THREE.PointLight(0x6366f1, 2, 50); // Indigo
-        pointLight1.position.set(5, 5, 5);
-        scene.add(pointLight1);
-
-        const pointLight2 = new THREE.PointLight(0xec4899, 1.5, 50); // Pink
-        pointLight2.position.set(-5, 3, -5);
-        scene.add(pointLight2);
-
-        const deskLight = new THREE.PointLight(0x38bdf8, 2, 5); // Screen glow
-        deskLight.position.set(0, 1.5, 1);
-        scene.add(deskLight);
-
-        // Ambient background lighting for the cliffs
-        const dirLight = new THREE.DirectionalLight(0x4338ca, 0.5);
-        dirLight.position.set(-10, 10, -10);
-        scene.add(dirLight);
-
-        // 5. Create the "Artist's Representation" of the Web Developer
         createAvatar();
-
-        // 6. Environment / Background
         createEnvironment();
 
-        // 7. Event Listeners
         window.addEventListener("resize", onWindowResize);
-        document.addEventListener("mousemove", onMouseMove);
-
-        // 8. Start Loop
+        document.addEventListener("mousemove", (e) => {
+          mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+          mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+        });
         animate();
       }
 
       function createAvatar() {
         avatarGroup = new THREE.Group();
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xffceb4 });
+        const shirtMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+        const laptopMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 });
+        const blondeMat = new THREE.MeshStandardMaterial({ color: 0xeebf6d });
 
-        // Common Materials
-        const skinMat = new THREE.MeshStandardMaterial({
-          color: 0xffceb4,
-          roughness: 0.4,
-        });
-        const shirtMat = new THREE.MeshStandardMaterial({
-          color: 0x1e293b,
-          roughness: 0.7,
-        });
-        const laptopMat = new THREE.MeshStandardMaterial({
-          color: 0x94a3b8,
-          metalness: 0.8,
-          roughness: 0.2,
-        });
-        const screenMat = new THREE.MeshStandardMaterial({
-          color: 0x38bdf8,
-          emissive: 0x38bdf8,
-          emissiveIntensity: 0.5,
-        });
-        const blondeMat = new THREE.MeshStandardMaterial({
-          color: 0xeebf6d,
-          roughness: 0.9,
-        }); // Blonde hair/beard
-
-        // Head (A stylized box)
-        const headGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
-        const head = new THREE.Mesh(headGeo, skinMat);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), skinMat);
         head.position.y = 3.5;
-
-        // --- New Blonde Hair ---
-        const hairGeo = new THREE.BoxGeometry(1.3, 0.35, 1.3);
-        const hair = new THREE.Mesh(hairGeo, blondeMat);
-        hair.position.set(0, 4.15, 0);
-
-        // --- New Blonde Lincoln Beard ---
-        // Chin piece
-        const chinGeo = new THREE.BoxGeometry(1.25, 0.35, 0.4);
-        const chin = new THREE.Mesh(chinGeo, blondeMat);
-        chin.position.set(0, 2.95, 0.45);
-
-        // Sideburns / Jawline
-        const sideGeo = new THREE.BoxGeometry(0.3, 0.6, 1.25);
-        const leftBeard = new THREE.Mesh(sideGeo, blondeMat);
-        leftBeard.position.set(-0.5, 3.1, 0);
-        const rightBeard = new THREE.Mesh(sideGeo, blondeMat);
-        rightBeard.position.set(0.5, 3.1, 0);
-
-        // --- New Detailed Glasses ---
-        const frameMat = new THREE.MeshStandardMaterial({
-          color: 0x222222,
-          roughness: 0.2,
-        });
-        const lensMat = new THREE.MeshStandardMaterial({
-          color: 0x88ccff,
-          transparent: true,
-          opacity: 0.4,
-          roughness: 0.1,
-        });
-
-        // Frames and Lenses
-        const frameGeo = new THREE.BoxGeometry(0.45, 0.35, 0.05);
-        const lensGeo = new THREE.BoxGeometry(0.35, 0.25, 0.02);
-
-        const leftFrame = new THREE.Mesh(frameGeo, frameMat);
-        leftFrame.position.set(-0.28, 3.6, 0.62);
-        const leftLens = new THREE.Mesh(lensGeo, lensMat);
-        leftLens.position.set(-0.28, 3.6, 0.63);
-
-        const rightFrame = new THREE.Mesh(frameGeo, frameMat);
-        rightFrame.position.set(0.28, 3.6, 0.62);
-        const rightLens = new THREE.Mesh(lensGeo, lensMat);
-        rightLens.position.set(0.28, 3.6, 0.63);
-
-        // Nose bridge
-        const bridgeGeo = new THREE.BoxGeometry(0.2, 0.05, 0.05);
-        const bridge = new THREE.Mesh(bridgeGeo, frameMat);
-        bridge.position.set(0, 3.6, 0.62);
-
-        // Torso
-        const torsoGeo = new THREE.BoxGeometry(1.8, 2.2, 1);
-        const torso = new THREE.Mesh(torsoGeo, shirtMat);
+        const hair = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.35, 1.3), blondeMat);
+        hair.position.y = 4.15;
+        const beard = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.35, 0.4), blondeMat);
+        beard.position.set(0, 2.95, 0.45);
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(1.8, 2.2, 1), shirtMat);
         torso.position.y = 1.8;
+        const laptop = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 1.5), laptopMat);
+        laptop.position.set(0, 0.8, 1.5);
+        const platform = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 0.2, 32), new THREE.MeshStandardMaterial({ color: 0x1e1b4b }));
 
-        // Arms
-        const armGeo = new THREE.BoxGeometry(0.5, 2, 0.5);
-        const leftArm = new THREE.Mesh(armGeo, shirtMat);
-        leftArm.position.set(-1.2, 1.8, 0.2);
-        leftArm.rotation.x = -Math.PI / 4; // Reaching forward
-
-        const rightArm = new THREE.Mesh(armGeo, shirtMat);
-        rightArm.position.set(1.2, 1.8, 0.2);
-        rightArm.rotation.x = -Math.PI / 4;
-
-        // Laptop Base
-        const laptopBaseGeo = new THREE.BoxGeometry(2, 0.1, 1.5);
-        const laptopBase = new THREE.Mesh(laptopBaseGeo, laptopMat);
-        laptopBase.position.set(0, 0.8, 1.5);
-
-        // Laptop Screen
-        const laptopScreenGeo = new THREE.BoxGeometry(2, 1.2, 0.1);
-        const laptopScreen = new THREE.Mesh(laptopScreenGeo, laptopMat);
-        laptopScreen.position.set(0, 1.4, 0.8);
-        laptopScreen.rotation.x = -0.2;
-
-        // Glowing Screen Display
-        const displayGeo = new THREE.PlaneGeometry(1.8, 1);
-        const display = new THREE.Mesh(displayGeo, screenMat);
-        display.position.set(0, 1.4, 0.86);
-        display.rotation.x = -0.2;
-
-        // Floating Platform
-        const platGeo = new THREE.CylinderGeometry(3, 3, 0.2, 32);
-        const platMat = new THREE.MeshStandardMaterial({
-          color: 0x1e1b4b,
-          metalness: 0.5,
-          roughness: 0.2,
-        });
-        const platform = new THREE.Mesh(platGeo, platMat);
-        platform.position.y = 0;
-
-        // Assemble everything
-        avatarGroup.add(head);
-        avatarGroup.add(hair);
-        avatarGroup.add(chin);
-        avatarGroup.add(leftBeard);
-        avatarGroup.add(rightBeard);
-        avatarGroup.add(leftFrame);
-        avatarGroup.add(leftLens);
-        avatarGroup.add(rightFrame);
-        avatarGroup.add(rightLens);
-        avatarGroup.add(bridge);
-        avatarGroup.add(torso);
-        avatarGroup.add(leftArm);
-        avatarGroup.add(rightArm);
-        avatarGroup.add(laptopBase);
-        avatarGroup.add(laptopScreen);
-        avatarGroup.add(display);
-        avatarGroup.add(platform);
-
-        // Shift group to be nicely framed
+        avatarGroup.add(head, hair, beard, torso, laptop, platform);
         avatarGroup.position.set(3, -1, 0);
-        // Rotate slightly towards the UI
         avatarGroup.rotation.y = -Math.PI / 6;
-
         scene.add(avatarGroup);
       }
 
       function createEnvironment() {
-        // Grid helper for a cyber/tech feel
-        const gridHelper = new THREE.GridHelper(60, 60, 0x6366f1, 0x1e293b);
-        gridHelper.position.y = -1;
-        scene.add(gridHelper);
+        const grid = new THREE.GridHelper(60, 60, 0x6366f1, 0x1e293b);
+        grid.position.y = -1;
+        scene.add(grid);
 
-        // --- New 3D Background Hills/Cliffs ---
-        const cliffMat = new THREE.MeshStandardMaterial({
-          color: 0x0f172a,
-          flatShading: true,
-          roughness: 0.9,
-          metalness: 0.1,
-        });
-
-        // Procedurally generate low-poly mountains in the distance
-        for (let i = 0; i < 20; i++) {
-          const radius = 3 + Math.random() * 8;
-          const height = 10 + Math.random() * 25;
-          const segments = 4 + Math.floor(Math.random() * 3); // Low-poly geometry
-
-          const cliffGeo = new THREE.ConeGeometry(radius, height, segments);
-          const cliff = new THREE.Mesh(cliffGeo, cliffMat);
-
-          // Position them in an arc in the background
-          const angle = (Math.random() - 0.5) * Math.PI * 1.5;
-          const distance = 20 + Math.random() * 25;
-
-          cliff.position.x = Math.sin(angle) * distance;
-          cliff.position.z = -Math.cos(angle) * distance - 10;
-          cliff.position.y = height / 2 - 3; // Keep bases slightly submerged
-
-          // Random rotations for organic shapes
-          cliff.rotation.y = Math.random() * Math.PI;
-          cliff.rotation.z = (Math.random() - 0.5) * 0.2;
-
-          scene.add(cliff);
-        }
-
-        // Floating background particles (representing data/code)
         const particlesGeo = new THREE.BufferGeometry();
-        const particleCount = 600;
-        const posArray = new Float32Array(particleCount * 3);
-
-        for (let i = 0; i < particleCount * 3; i++) {
-          posArray[i] = (Math.random() - 0.5) * 30; // Spread slightly wider
-        }
-
-        particlesGeo.setAttribute(
-          "position",
-          new THREE.BufferAttribute(posArray, 3),
-        );
-        const particleMat = new THREE.PointsMaterial({
-          size: 0.05,
-          color: 0x818cf8,
-          transparent: true,
-          opacity: 0.6,
-        });
-
-        particlesMesh = new THREE.Points(particlesGeo, particleMat);
+        const posArray = new Float32Array(600 * 3);
+        for (let i = 0; i < 1800; i++) posArray[i] = (Math.random() - 0.5) * 30;
+        particlesGeo.setAttribute("position", new THREE.BufferAttribute(posArray, 3));
+        particlesMesh = new THREE.Points(particlesGeo, new THREE.PointsMaterial({ size: 0.05, color: 0x818cf8 }));
         scene.add(particlesMesh);
       }
 
@@ -578,62 +371,25 @@
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-
-        // Adjust avatar position based on screen width
-        if (window.innerWidth < 768) {
-          avatarGroup.position.set(0, -2, -2); // Center on mobile
-        } else {
-          avatarGroup.position.set(3, -1, 0); // Right side on desktop
-        }
-      }
-
-      function onMouseMove(event) {
-        mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-        mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        avatarGroup.position.set(window.innerWidth < 768 ? 0 : 3, window.innerWidth < 768 ? -2 : -1, window.innerWidth < 768 ? -2 : 0);
       }
 
       const clock = new THREE.Clock();
-
       function animate() {
         requestAnimationFrame(animate);
-
-        const elapsedTime = clock.getElapsedTime();
-
-        // Gentle floating animation for the avatar
+        const t = clock.getElapsedTime();
         if (avatarGroup) {
-          avatarGroup.position.y =
-            (window.innerWidth < 768 ? -2 : -1) +
-            Math.sin(elapsedTime * 2) * 0.1;
-
-          // Parallax effect based on mouse movement
-          const targetRotationX = mouseY * 0.1;
-          const targetRotationY =
-            (window.innerWidth < 768 ? 0 : -Math.PI / 6) + mouseX * 0.2;
-
-          avatarGroup.rotation.x +=
-            (targetRotationX - avatarGroup.rotation.x) * 0.05;
-          avatarGroup.rotation.y +=
-            (targetRotationY - avatarGroup.rotation.y) * 0.05;
+          avatarGroup.position.y += Math.sin(t * 2) * 0.005;
+          avatarGroup.rotation.x += (mouseY * 0.1 - avatarGroup.rotation.x) * 0.05;
+          avatarGroup.rotation.y += ((window.innerWidth < 768 ? 0 : -Math.PI / 6) + mouseX * 0.2 - avatarGroup.rotation.y) * 0.05;
         }
-
-        // Slowly rotate background particles
-        if (particlesMesh) {
-          particlesMesh.rotation.y = elapsedTime * 0.05;
-          particlesMesh.rotation.x = elapsedTime * 0.02;
-        }
-
+        if (particlesMesh) particlesMesh.rotation.y = t * 0.05;
         renderer.render(scene, camera);
       }
 
-      // ==========================================
-      // INITIALIZATION
-      // ==========================================
-
-      window.onload = function () {
+      window.onload = () => {
         initializeUI();
         initThreeJS();
-
-        // Trigger initial resize to set proper layout
         onWindowResize();
       };
     </script>
