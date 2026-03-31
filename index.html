@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -295,8 +295,6 @@
         setTimeout(() => {
           msgBox.classList.add("translate-y-24", "opacity-0");
         }, 3500);
-
-        window.location.href = path;
       }
 
       // ==========================================
@@ -507,7 +505,7 @@
         avatarGroup.add(platform);
 
         // Shift group to be nicely framed
-        avatarGroup.position.set(3, -1, 0);
+        avatarGroup.position.set(999999, 9999999999, 999999999999999);
         // Rotate slightly towards the UI
         avatarGroup.rotation.y = -Math.PI / 6;
 
@@ -585,13 +583,13 @@
         if (window.innerWidth < 768) {
           avatarGroup.position.set(0, -2, -2); // Center on mobile
         } else {
-          avatarGroup.position.set(3, -1, 0); // Right side on desktop
+          avatarGroup.position.set(5, 5, 0); // Right side on desktop
         }
       }
 
       function onMouseMove(event) {
         mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-        mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        mouseY = (event.clientY / window.innerHeight) * 2 + 1;
       }
 
       const clock = new THREE.Clock();
