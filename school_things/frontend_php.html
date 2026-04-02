@@ -19,19 +19,21 @@
     <div id="loading-screen" class="text-center space-y-4 p-6">
         <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-200 h-12 w-12 mb-4 mx-auto"></div>
         <h2 class="text-xl font-semibold text-slate-700">Initializing PHP WASM...</h2>
-        <p class="text-slate-500 text-sm max-w-xs mx-auto">Downloading the PHP 8.2 binary. This may take a moment depending on your connection.</p>
+        <p class="text-slate-500 text-sm max-w-xs mx-auto">Downloading the PHP 8.2 binary from the WebAssembly registry. This may take 5-10 seconds.</p>
     </div>
 
     <script type="module">
-        // Using esm.sh instead of jsdelivr to handle nested dependency resolution (@php-wasm/universal)
-        import { PHP } from 'https://esm.sh/@php-wasm/web@0.0.9';
+        // Using unpkg for better reliability with this specific package
+        import { PHP } from 'https://unpkg.com/@php-wasm/web@0.2.1/dist/index.js';
 
         async function runPhp() {
             try {
                 // 1. Initialize the PHP WebAssembly instance
+                // We use 8.2 as the stable target
                 const php = await PHP.load('8.2');
 
                 // 2. Define the PHP/HTML code
+                // Escaping backslashes for JS template literal compatibility
                 const phpCode = `
 <?php
 $status = "WASM RUNTIME ACTIVE";
@@ -61,7 +63,7 @@ $selected = $answers[array_rand($answers)];
                     <p class="text-xs uppercase tracking-wider text-indigo-400 mb-1 font-bold">Randomized Answer:</p>
                     <p class="text-xl font-medium text-indigo-900 italic">"<?php echo $selected; ?>"</p>
                 </div>
-                <button onclick="location.reload()" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm transition-colors">
+                <button onclick="location.reload()" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm transition-colors shadow-lg shadow-indigo-200">
                     Rerender Logic
                 </button>
             </section>
@@ -87,7 +89,7 @@ $selected = $answers[array_rand($answers)];
 
         <section class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
             <h2 class="text-lg font-semibold mb-4 text-slate-800">📝 PHP Shell Output</h2>
-            <div class="bg-slate-900 rounded-xl p-4 font-mono text-xs text-green-400 leading-relaxed">
+            <div class="bg-slate-900 rounded-xl p-4 font-mono text-xs text-green-400 leading-relaxed overflow-x-auto">
                 <?php 
                     echo "> php --version\\n";
                     echo "PHP " . phpversion() . " (cli) (built: WASM)\\n\\n";
@@ -105,27 +107,30 @@ $selected = $answers[array_rand($answers)];
                 // 3. Run the code
                 const output = await php.run(phpCode);
 
-                // 4. Render
+                // 4. Render output to the body
                 document.body.innerHTML = output.text;
 
             } catch (error) {
                 console.error('PHP WASM Error:', error);
                 document.getElementById('loading-screen').innerHTML = `
-                    <div class="text-red-500 p-6 bg-white shadow-xl rounded-2xl border border-red-100 max-w-md mx-auto">
-                        <h2 class="font-bold text-lg mb-2">Initialization Failed</h2>
-                        <p class="text-sm text-slate-600 mb-4">The WebAssembly module could not be loaded. This is often due to browser security restrictions or network issues.</p>
-                        <div class="bg-slate-50 p-3 rounded font-mono text-[10px] text-red-400 break-all">
-                            ${error.stack || error.message}
+                    <div class="text-left text-red-500 p-8 bg-white shadow-xl rounded-2xl border border-red-100 max-w-lg mx-auto">
+                        <h2 class="font-bold text-xl mb-2 flex items-center gap-2">
+                            <span>❌</span> Initialization Failed
+                        </h2>
+                        <p class="text-sm text-slate-600 mb-4">The WebAssembly module could not be loaded. This typically happens due to network timeouts or CDN availability.</p>
+                        <div class="bg-slate-50 p-4 rounded-lg font-mono text-[11px] text-red-400 overflow-auto max-h-40 border border-slate-200">
+                            ${error.message || 'Unknown Error'}
                         </div>
-                        <button onclick="location.reload()" class="mt-4 w-full bg-slate-800 text-white py-2 rounded-lg text-sm">Try Again</button>
+                        <button onclick="location.reload()" class="mt-6 w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-semibold transition-all">
+                            Refresh and Retry
+                        </button>
                     </div>
                 `;
             }
         }
 
-        runPhp();
+        // Delay execution slightly to ensure DOM is fully ready
+        window.addEventListener('load', runPhp);
     </script>
-</body>
-</html>
 </body>
 </html>
