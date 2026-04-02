@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHP in the Browser (WASM)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Loading animation for the WASM initialization */
+        .loader {
+            border-top-color: #4f46e5;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @-webkit-keyframes spinner { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center">
+
+    <!-- Loading State -->
+    <div id="loading-screen" class="text-center space-y-4">
+        <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-200 h-12 w-12 mb-4 mx-auto"></div>
+        <h2 class="text-xl font-semibold text-slate-700">Initializing PHP WASM...</h2>
+        <p class="text-slate-500 text-sm max-w-xs mx-auto">Downloading the PHP 8.2 binary and preparing the runtime environment in your browser.</p>
+    </div>
+
+    <script type="module">
+        import { PHP } from 'https://cdn.jsdelivr.net/npm/@php-wasm/web/index.js';
+
+        async function runPhp() {
+            try {
+                // 1. Initialize the PHP WebAssembly instance (PHP 8.2)
+                const php = await PHP.load('8.2');
+
+                // 2. Define the PHP/HTML code to run
+                // We wrap the previous dashboard code inside this template literal
+                const phpCode = `
+<!DOCTYPE html>
+<html lang="en">
+<body class="bg-slate-50 text-slate-900 p-4 md:p-8">
+    <div class="max-w-4xl w-full mx-auto space-y-6">
+        <header class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-indigo-600">PHP WASM Diagnostic</h1>
+                    <p class="text-slate-500 text-sm">Executing PHP client-side via WebAssembly.</p>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                    <span class="relative flex h-2 w-2">
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    </span>
+                    WASM RUNTIME ACTIVE
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <h2 class="text-lg font-semibold mb-4">🔮 WASM Logic Test</h2>
+                <?php
+                $answers = ["It is certain.", "Definitely.", "Ask again later.", "Outlook not so good.", "Very doubtful."];
+                $selected = $answers[array_rand($answers)];
+                ?>
+                <div class="p-4 rounded-xl bg-indigo-50 border border-indigo-100">
+                    <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">PHP-in-Browser Output:</p>
+                    <p class="text-xl font-medium text-slate-800 italic">"<?php echo $selected; ?>"</p>
+                </div>
+                <button onclick="location.reload()" class="mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg text-sm">Rerender Logic</button>
+            </section>
+
+            <section class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <h2 class="text-lg font-semibold mb-4">⚙️ WASM Environment</h2>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">PHP Version:</span>
+                        <span class="font-mono text-indigo-600"><?php echo phpversion(); ?></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">SAPI Name:</span>
+                        <span class="font-mono text-slate-700"><?php echo php_sapi_name(); ?></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Memory Limit:</span>
+                        <span class="font-mono text-slate-700"><?php echo ini_get('memory_limit'); ?></span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+            <h2 class="text-lg font-semibold mb-4">📝 PHP Echo Test</h2>
+            <div class="bg-slate-900 rounded-xl p-4 font-mono text-xs text-green-400">
+                <?php 
+                    echo "Current Time: " . date('Y-m-d H:i:s') . "\\n";
+                    echo "Operating System: " . PHP_OS . "\\n";
+                    echo "Integer Size: " . PHP_INT_SIZE . " bytes";
+                ?>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
+                `;
+
+                // 3. Run the PHP code and capture the output
+                const output = await php.run(phpCode);
+
+                // 4. Update the page content with the result
+                document.body.innerHTML = output.text;
+
+            } catch (error) {
+                console.error('PHP WASM Error:', error);
+                document.getElementById('loading-screen').innerHTML = `
+                    <div class="text-red-500 p-6 bg-red-50 rounded-xl border border-red-200 max-w-md mx-auto">
+                        <h2 class="font-bold mb-2">Failed to Load PHP WASM</h2>
+                        <p class="text-sm">Browser-based PHP requires a modern environment and may be blocked by certain CSP settings.</p>
+                        <p class="mt-2 text-xs font-mono">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        runPhp();
+    </script>
+</body>
+</html>
