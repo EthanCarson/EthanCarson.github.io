@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ethan Carson | Portfolio</title>
+    <link rel="shortcut icon" href="logo-fav.png" type="image/x-icon" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Oswald:wght@400;700&display=swap");
@@ -283,7 +284,7 @@
         <p
           id="hero-title"
           class="bg-black text-white px-6 py-2 text-xl md:text-2xl font-black inline-block uppercase italic">
-          Bringing Worlds to Life
+          New Media Designer
         </p>
       </div>
     </header>
@@ -364,11 +365,11 @@
             &copy; <span id="year"></span> Ethan Carson
           </p>
           <p class="text-[10px] opacity-60 uppercase tracking-[0.4em] mb-6">
-            New Media Developer & Web Designer
+            New Media Developer & World Builder
           </p>
           <p class="text-[9px] opacity-40 italic uppercase max-w-md mx-auto">
             Visual design inspired by kinetic aesthetics. All work &copy; Ethan
-            Carson. Development assistend by Gemini AI.
+            Carson.
           </p>
         </div>
       </div>
@@ -451,6 +452,29 @@
         }
       }
 
+      /**
+       * Converts various YouTube link formats to the correct embed URL.
+       */
+      function getYouTubeEmbedUrl(url) {
+        if (!url.includes("youtube.com") && !url.includes("youtu.be"))
+          return url;
+
+        let videoId = "";
+        try {
+          if (url.includes("youtu.be/")) {
+            videoId = url.split("youtu.be/")[1].split(/[?#]/)[0];
+          } else if (url.includes("shorts/")) {
+            videoId = url.split("shorts/")[1].split(/[?#]/)[0];
+          } else {
+            videoId = new URL(url).searchParams.get("v");
+          }
+        } catch (e) {
+          console.error("Error parsing YouTube URL:", url);
+        }
+
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+      }
+
       function buildCarousel(mediaList) {
         if (!mediaList || mediaList.length === 0)
           return `<div class="flex items-center justify-center h-full text-gray-700 font-bold uppercase italic">Visual Asset Error</div>`;
@@ -462,12 +486,13 @@
               url.includes("youtu.be") ||
               url.includes("vimeo") ||
               url.includes("embed");
-            const isImage = url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i);
+            const isImage = url.match(/\.(jpeg|jpg|gif|png|webp|svg)/i);
             const activeClass = index === 0 ? "active" : "";
 
             let content = "";
             if (isVideo) {
-              content = `<iframe class="w-full h-full" src="${url}" frameborder="0" allowfullscreen></iframe>`;
+              const embedUrl = getYouTubeEmbedUrl(url);
+              content = `<iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allowfullscreen></iframe>`;
             } else if (isImage) {
               content = `<img src="${url}" class="w-full h-full object-cover">`;
             } else {
