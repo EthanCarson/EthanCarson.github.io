@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factory Workers: Conveyor Chaos</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            border: 4px solid #333;
+            border-radius: 8px;
+            background-color: #2c3e50;
+        }
+
+        canvas {
+            display: block;
+            border-radius: 4px;
+        }
+
+        #instructionsPanel {
+            margin-top: 20px;
+            text-align: center;
+            max-width: 800px;
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+
+        .key-badge {
+            background-color: #444;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #f1c40f;
+            border: 1px solid #666;
+            box-shadow: 0 2px 0 #222;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+
+    <div id="instructionsPanel">
+        <h3>How To Play</h3>
+        <p>
+            Work together to pass packages up the conveyor belts to the delivery truck!<br>
+            <strong>Left Worker (Blue):</strong> Press <span class="key-badge">W</span> to move UP and <span class="key-badge">S</span> to move DOWN.<br>
+            <strong>Right Worker (Yellow):</strong> Press <span class="key-badge">▲ Up Arrow</span> and <span class="key-badge">▼ Down Arrow</span>.<br>
+            Missing a package causes a drop. 3 drops and you are fired! Score 300 points to recover a drop.
+        </p>
+    </div>
+
+    <script>
+        // ============================================================================
+        // GAME CONFIGURATION (EASY TO EDIT VARIABLES)
+        // ============================================================================
+        const GAME_CONFIGURATION = {
+            // Sizing and Grid
+            GRID_CELL_SIZE_PIXELS: 60,
+            CELLS_PER_CONVEYOR_BELT: 8, // Normal cells. Cell index equal to this value is the "invisible edge"
+            
+            // Pacing and Speed (Measured in Animation Frames, 60 frames = 1 second)
+            INITIAL_FRAMES_PER_GRID_MOVE: 180, // Start very slow (3 seconds per grid move)
+            MINIMUM_FRAMES_PER_GRID_MOVE: 20,  // Maximum possible speed
+            SPEED_UP_DECREMENT_AFTER_TRUCK: 10, // Frames subtracted to speed up after truck leaves
+            SLOW_DOWN_INCREMENT_AFTER_LOSS: 30, // Frames added to slow down and forgive the player after a drop
+            
+            // Delays and Timers
+            DROP_RECOVERY_PAUSE_FRAMES: 180, // 3 seconds pause after dropping
+            TRUCK_DEPARTURE_PAUSE_FRAMES: 300, // 5 seconds pause while truck is driving
+            
+            // Game Rules
+            PACKAGES_REQUIRED_FOR_FULL_TRUCK: 8,
+            SCORE_THRESHOLD_FOR_FREE_LIFE: 300,
+            MAXIMUM_PACKAGES_PER_WAVE: 4,
+            MINIMUM_GAP_BETWEEN_WAVES_CELLS: 12
+        };
+
+        // ============================================================================
+        // CONSTANTS & ENVIRONMENT POSITIONS
+        // ============================================================================
+        const gameCanvasElement = document.getElementById('gameCanvas');
+        const canvasGraphicsContext = gameCanvasElement.getContext('2d');
+        
+        const CANVAS_WIDTH_PIXELS = 800;
+        const CANVAS_HEIGHT_PIXELS = 600;
+
+        const LEFT_WORKER_HORIZONTAL_POSITION = 120;
+        const RIGHT_WORKER_HORIZONTAL_POSITION = 640;
+        const CONVEYOR_BELT_START_HORIZONTAL_POSITION = 160;
+        const CONVEYOR_BELT_END_HORIZONTAL_POSITION = 640;
+        
+        const BELT_1_VERTICAL_POSITION = 500; 
+        const BELT_2_VERTICAL_POSITION = 400;
+        const BELT_3_VERTICAL_POSITION = 300;
+        const BELT_4_VERTICAL_POSITION = 200;
+        const BELT_5_VERTICAL_POSITION = 100; 
+        
+        const WORKER_ELEVATION_BOTTOM = 0;
+        const WORKER_ELEVATION_MIDDLE = 1;
+        const WORKER_ELEVATION_TOP = 2;
+
+        const GAME_STATE_MENU = 'STATE_MAIN_MENU';
+        const GAME_STATE_PLAYING = 'STATE_ACTIVE_PLAY';
+        const GAME_STATE_TRUCK_BREAK = 'STATE_TRUCK_LOADING_BREAK';
+        const GAME_STATE_PACKAGE_FALLING = 'STATE_WAITING_FOR_PACKAGE_TO_FALL';
+        const GAME_STATE_DROP_RECOVERY_PAUSE = 'STATE_RECOVERING_FROM_DROP';
+        const GAME_STATE_GAME_OVER = 'STATE_GAME_OVER';
+
+        // ============================================================================
+        // GLOBAL VARIABLES
+        // ============================================================================
+        let currentGameState = GAME_STATE_MENU;
+        let playerTotalScore = 0;
+        let playerHighScore = localStorage.getItem('factoryConveyorHighScore') || 0;
+        let playerTotalMisses = 0;
+        
+        let leftWorkerCurrentElevation = WORKER_ELEVATION_BOTTOM;
+        let rightWorkerCurrentElevation = WORKER_ELEVATION_BOTTOM;
+        
+        let currentFramesBetweenLogicalGridMoves = GAME_CONFIGURATION.INITIAL_FRAMES_PER_GRID_MOVE;
+        let framesSinceLastLogicalGridMove = 0;
+        let freeLifeScoreMultiplier = 1; 
+        
+        let logicalGridSpawnQueueArray = [];
+        let activePackagesArray = [];
+        let currentlyFallingPackagesArray = [];
+        let framesRemainingInDropRecoveryPause = 0;
+        
+        let packagesLoadedIntoTruck = 0;
+        let totalTruckDeparturesCount = 0; 
+        let truckBreakAnimationTimer = 0;
+        let truckHorizontalOffsetPixels = 0;
+
+        let floatingTextArray = []; 
+        let globalAnimationTimestamp = 0;
+
+        // ============================================================================
+        // CLASSES
+        // ============================================================================
+
+        class FactoryPackage {
+            constructor() {
+                // Belt -1 is the entry spawn chute that feeds to the Left Worker
+                this.logicalConveyorBeltIndex = -1; 
+                this.logicalCellIndexOnBelt = 0; 
+                
+                let initialPhysicalPosition = calculatePhysicalPositionForGridCell(this.logicalConveyorBeltIndex, this.logicalCellIndexOnBelt);
+                this.visualHorizontalPosition = initialPhysicalPosition.horizontalPositionX;
+                this.visualVerticalPosition = initialPhysicalPosition.verticalPositionY;
+                
+                this.isCurrentlyFalling = false;
+                this.fallingVerticalVelocity = 0;
+                this.hasBeenSuccessfullyDelivered = false;
+
+                this.isCurrentlyTeeteringOnInvisibleEdge = false;
+            }
+
+            updateVisualPositionInterpolation() {
+                if (this.isCurrentlyFalling) {
+                    this.fallingVerticalVelocity += 0.4; 
+                    this.visualVerticalPosition += this.fallingVerticalVelocity;
+                    return;
+                }
+
+                if (this.hasBeenSuccessfullyDelivered) {
+                    return;
+                }
+
+                let targetPhysicalPosition = calculatePhysicalPositionForGridCell(this.logicalConveyorBeltIndex, this.logicalCellIndexOnBelt);
+                
+                // Snap vertical position instantly to simulate sudden belt drops
+                this.visualVerticalPosition = targetPhysicalPosition.verticalPositionY;
+
+                // Smooth horizontal interpolation based on grid speed
+                let horizontalDistanceToTarget = targetPhysicalPosition.horizontalPositionX - this.visualHorizontalPosition;
+                let requiredSpeedToCompleteMoveInOneTick = GAME_CONFIGURATION.GRID_CELL_SIZE_PIXELS / Math.max(1, currentFramesBetweenLogicalGridMoves);
+                let smoothVisualSpeedCap = requiredSpeedToCompleteMoveInOneTick * 1.1; 
+
+                if (Math.abs(horizontalDistanceToTarget) > smoothVisualSpeedCap) {
+                    this.visualHorizontalPosition += Math.sign(horizontalDistanceToTarget) * smoothVisualSpeedCap;
+                } else {
+                    this.visualHorizontalPosition = targetPhysicalPosition.horizontalPositionX;
+                }
+            }
+
+            triggerFallingSequence() {
+                this.isCurrentlyFalling = true;
+                processPlayerMiss(this);
+            }
+
+            processSuccessfulDelivery() {
+                this.hasBeenSuccessfullyDelivered = true;
+                packagesLoadedIntoTruck += 1;
+                playerTotalScore += 10;
+                
+                checkAndAwardFreeLife();
+
+                if (packagesLoadedIntoTruck >= GAME_CONFIGURATION.PACKAGES_REQUIRED_FOR_FULL_TRUCK) {
+                    initiateTruckBreakSequence();
+                }
+            }
+
+            teleportInstantlyToNextBelt(newBeltIndex) {
+                this.logicalConveyorBeltIndex = newBeltIndex;
+                this.logicalCellIndexOnBelt = 0;
+                this.isCurrentlyTeeteringOnInvisibleEdge = false;
+                
+                let newTargetPosition = calculatePhysicalPositionForGridCell(this.logicalConveyorBeltIndex, this.logicalCellIndexOnBelt);
+                this.visualHorizontalPosition = newTargetPosition.horizontalPositionX;
+                this.visualVerticalPosition = newTargetPosition.verticalPositionY;
+            }
+        }
+
+        // ============================================================================
+        // CORE LOGIC & GRID MATHEMATICS
+        // ============================================================================
+
+        function calculatePhysicalPositionForGridCell(beltIndex, cellIndex) {
+            let horizontalPositionX = 0;
+            let verticalPositionY = 0;
+            let cellSize = GAME_CONFIGURATION.GRID_CELL_SIZE_PIXELS;
+            
+            if (beltIndex === -1) {
+                verticalPositionY = BELT_1_VERTICAL_POSITION;
+                // Feeds into Left Worker from the left
+                horizontalPositionX = CONVEYOR_BELT_START_HORIZONTAL_POSITION - ((GAME_CONFIGURATION.CELLS_PER_CONVEYOR_BELT - cellIndex) * cellSize) + (cellSize/2);
+            } else if (beltIndex === 0) {
+                verticalPositionY = BELT_1_VERTICAL_POSITION;
+                horizontalPositionX = CONVEYOR_BELT_START_HORIZONTAL_POSITION + (cellIndex * cellSize) + (cellSize/2);
+            } else if (beltIndex === 1) {
+                verticalPositionY = BELT_2_VERTICAL_POSITION;
+                horizontalPositionX = CONVEYOR_BELT_END_HORIZONTAL_POSITION - (cellIndex * cellSize) - (cellSize/2);
+            } else if (beltIndex === 2) {
+                verticalPositionY = BELT_3_VERTICAL_POSITION;
+                horizontalPositionX = CONVEYOR_BELT_START_HORIZONTAL_POSITION + (cellIndex * cellSize) + (cellSize/2);
+            } else if (beltIndex === 3) {
+                verticalPositionY = BELT_4_VERTICAL_POSITION;
+                horizontalPositionX = CONVEYOR_BELT_END_HORIZONTAL_POSITION - (cellIndex * cellSize) - (cellSize/2);
+            } else if (beltIndex === 4) {
+                verticalPositionY = BELT_5_VERTICAL_POSITION;
+                horizontalPositionX = CONVEYOR_BELT_START_HORIZONTAL_POSITION + (cellIndex * cellSize) + (cellSize/2);
+            } else if (beltIndex === 5) {
+                // Inside delivery truck
+                verticalPositionY = BELT_5_VERTICAL_POSITION - 20;
+                horizontalPositionX = CONVEYOR_BELT_END_HORIZONTAL_POSITION + 80;
+            }
+
+            return { horizontalPositionX, verticalPositionY };
+        }
+
+        function isWorkerPresentToCatchPackage(beltIndex) {
+            if (beltIndex === -1 && leftWorkerCurrentElevation === WORKER_ELEVATION_BOTTOM) return true;
+            if (beltIndex === 0 && rightWorkerCurrentElevation === WORKER_ELEVATION_BOTTOM) return true;
+            if (beltIndex === 1 && leftWorkerCurrentElevation === WORKER_ELEVATION_MIDDLE) return true;
+            if (beltIndex === 2 && rightWorkerCurrentElevation === WORKER_ELEVATION_MIDDLE) return true;
+            if (beltIndex === 3 && leftWorkerCurrentElevation === WORKER_ELEVATION_TOP) return true;
+            if (beltIndex === 4 && rightWorkerCurrentElevation === WORKER_ELEVATION_TOP) return true;
+            return false;
+        }
+
+        function advanceAllPackagesOneLogicalGridUnit() {
+            // Sort packages descending by absolute progress to move the ones furthest along first
+            activePackagesArray.sort((packageA, packageB) => {
+                let absoluteProgressA = (packageA.logicalConveyorBeltIndex * 100) + packageA.logicalCellIndexOnBelt;
+                let absoluteProgressB = (packageB.logicalConveyorBeltIndex * 100) + packageB.logicalCellIndexOnBelt;
+                return absoluteProgressB - absoluteProgressA;
+            });
+
+            for (let packageToEvaluate of activePackagesArray) {
+                if (packageToEvaluate.isCurrentlyFalling || packageToEvaluate.hasBeenSuccessfullyDelivered) continue;
+
+                let currentBelt = packageToEvaluate.logicalConveyorBeltIndex;
+                let currentCell = packageToEvaluate.logicalCellIndexOnBelt;
+
+                // --- EDGE & TRANSFER LOGIC ---
+                // "Edge Normal Box" = CELLS_PER_CONVEYOR_BELT - 1
+                // "Invisible Last Chance Box" = CELLS_PER_CONVEYOR_BELT
+
+                if (currentCell === GAME_CONFIGURATION.CELLS_PER_CONVEYOR_BELT - 1) {
+                    if (isWorkerPresentToCatchPackage(currentBelt)) {
+                        // Success! Catch at normal edge. Transfer to next belt.
+                        packageToEvaluate.teleportInstantlyToNextBelt(currentBelt + 1);
+                        awardPointsForBeltTransfer(currentBelt + 1);
+                    } else {
+                        // Missed normal edge! Move into invisible teetering box.
+                        packageToEvaluate.logicalCellIndexOnBelt += 1;
+                        packageToEvaluate.isCurrentlyTeeteringOnInvisibleEdge = true;
+                    }
+                    continue; // Movement evaluated for this tick
+                }
+
+                if (currentCell === GAME_CONFIGURATION.CELLS_PER_CONVEYOR_BELT) {
+                    // It is currently in the invisible last chance box
+                    if (isWorkerPresentToCatchPackage(currentBelt)) {
+                        // Miracle save! Transfer to next belt.
+                        packageToEvaluate.teleportInstantlyToNextBelt(currentBelt + 1);
+                        awardPointsForBeltTransfer(currentBelt + 1);
+                    } else {
+                        // Failed to grab last chance. Drop package.
+                        packageToEvaluate.triggerFallingSequence();
+                    }
+                    continue; // Movement evaluated for this tick
+                }
+
+                packageToEvaluate.isCurrentlyTeeteringOnInvisibleEdge = false;
+
+                // --- NORMAL MOVEMENT & COLLISION LOGIC ---
+                let nextTargetCell = currentCell + 1;
+                let isNextCellOccupied = false;
+                
+                for (let otherPackage of activePackagesArray) {
+                    if (otherPackage !== packageToEvaluate && !otherPackage.isCurrentlyFalling && !otherPackage.hasBeenSuccessfullyDelivered) {
+                        if (otherPackage.logicalConveyorBeltIndex === currentBelt && otherPackage.logicalCellIndexOnBelt === nextTargetCell) {
+                            isNextCellOccupied = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isNextCellOccupied) {
+                    packageToEvaluate.logicalCellIndexOnBelt = nextTargetCell;
+                }
+            }
+
+            // --- SPAWN QUEUE PROCESSING ---
+            if (logicalGridSpawnQueueArray.length === 0) {
+                populateQueueWithNewWavePattern();
+            }
+
+            let shouldSpawnPackageAtStartThisTick = logicalGridSpawnQueueArray.shift();
+            if (shouldSpawnPackageAtStartThisTick) {
+                activePackagesArray.push(new FactoryPackage());
+            }
+        }
+
+        // ============================================================================
+        // HELPER FUNCTIONS
+        // ============================================================================
+
+        function determineLeftWorkerVerticalDrawingPosition(elevationIndex) {
+            if (elevationIndex === WORKER_ELEVATION_BOTTOM) return BELT_1_VERTICAL_POSITION;
+            if (elevationIndex === WORKER_ELEVATION_MIDDLE) return BELT_3_VERTICAL_POSITION + 50; 
+            if (elevationIndex === WORKER_ELEVATION_TOP) return BELT_5_VERTICAL_POSITION + 50;
+            return BELT_1_VERTICAL_POSITION;
+        }
+
+        function determineRightWorkerVerticalDrawingPosition(elevationIndex) {
+            if (elevationIndex === WORKER_ELEVATION_BOTTOM) return BELT_2_VERTICAL_POSITION + 50;
+            if (elevationIndex === WORKER_ELEVATION_MIDDLE) return BELT_4_VERTICAL_POSITION + 50;
+            if (elevationIndex === WORKER_ELEVATION_TOP) return BELT_5_VERTICAL_POSITION - 20; 
+            return BELT_2_VERTICAL_POSITION + 50;
+        }
+
+        function awardPointsForBeltTransfer(newBeltIndex) {
+            if (newBeltIndex === 0) playerTotalScore += 1;
+            if (newBeltIndex === 1) playerTotalScore += 2;
+            if (newBeltIndex === 2) playerTotalScore += 2;
+            if (newBeltIndex === 3) playerTotalScore += 2;
+            if (newBeltIndex === 4) playerTotalScore += 2;
+            
+            if (newBeltIndex === 5) {
+                // This package was successfully transferred into the truck
+                let packageReference = activePackagesArray.find(p => p.logicalConveyorBeltIndex === 5 && !p.hasBeenSuccessfullyDelivered);
+                if(packageReference) packageReference.processSuccessfulDelivery();
+            }
+        }
+
+        function checkAndAwardFreeLife() {
+            if (playerTotalScore >= freeLifeScoreMultiplier * GAME_CONFIGURATION.SCORE_THRESHOLD_FOR_FREE_LIFE) {
+                if (playerTotalMisses > 0) {
+                    playerTotalMisses -= 1;
+                    spawnFloatingText("FREE LIFE!", CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2, '#2ecc71');
+                }
+                freeLifeScoreMultiplier += 1;
+            }
+        }
+
+        function processPlayerMiss(droppedPackageReference) {
+            playerTotalMisses += 1;
+            spawnFloatingText("DROP!", CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2 - 80, '#e74c3c');
+            
+            if (playerTotalMisses >= 3) {
+                currentGameState = GAME_STATE_GAME_OVER;
+                updateLocalStorageHighScore();
+            } else {
+                currentGameState = GAME_STATE_PACKAGE_FALLING;
+                if (!currentlyFallingPackagesArray.includes(droppedPackageReference)) {
+                    currentlyFallingPackagesArray.push(droppedPackageReference);
+                }
+            }
+        }
+
+        function initiateTruckBreakSequence() {
+            currentGameState = GAME_STATE_TRUCK_BREAK;
+            truckBreakAnimationTimer = 0;
+            playerTotalScore += 50; 
+            spawnFloatingText("TRUCK FULL! BONUS +50", CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2 - 50, '#f1c40f');
+            spawnFloatingText("SPEED INCREASE!", CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2, '#e67e22');
+            checkAndAwardFreeLife();
+        }
+
+        function updateLocalStorageHighScore() {
+            if (playerTotalScore > playerHighScore) {
+                playerHighScore = playerTotalScore;
+                localStorage.setItem('factoryConveyorHighScore', playerHighScore);
+            }
+        }
+
+        function resetGameDataToDefaults() {
+            playerTotalScore = 0;
+            playerTotalMisses = 0;
+            packagesLoadedIntoTruck = 0;
+            totalTruckDeparturesCount = 0;
+            activePackagesArray = [];
+            
+            currentFramesBetweenLogicalGridMoves = GAME_CONFIGURATION.INITIAL_FRAMES_PER_GRID_MOVE; 
+            framesSinceLastLogicalGridMove = 0;
+            freeLifeScoreMultiplier = 1;
+            
+            logicalGridSpawnQueueArray = [];
+            currentlyFallingPackagesArray = [];
+            framesRemainingInDropRecoveryPause = 0;
+
+            leftWorkerCurrentElevation = WORKER_ELEVATION_BOTTOM;
+            rightWorkerCurrentElevation = WORKER_ELEVATION_BOTTOM;
+            floatingTextArray = [];
+        }
+
+        function spawnFloatingText(messageString, positionHorizontal, positionVertical, colorHex) {
+            floatingTextArray.push({
+                textMessage: messageString,
+                positionHorizontal: positionHorizontal,
+                positionVertical: positionVertical,
+                colorHexCode: colorHex,
+                lifeTimeFramesRemaining: 90
+            });
+        }
+
+        function populateQueueWithNewWavePattern() {
+            let maxPackages = Math.min(GAME_CONFIGURATION.MAXIMUM_PACKAGES_PER_WAVE, 1 + totalTruckDeparturesCount);
+            let minPackages = Math.min(2, Math.max(1, Math.floor(totalTruckDeparturesCount / 2)));
+            let numberOfPackagesInThisWave = Math.floor(Math.random() * (maxPackages - minPackages + 1)) + minPackages;
+            
+            let consistentGapBetweenPackagesInWave = Math.floor(Math.random() * 3); 
+            
+            for (let packageCountIndex = 0; packageCountIndex < numberOfPackagesInThisWave; packageCountIndex++) {
+                logicalGridSpawnQueueArray.push(true); 
+                
+                if (packageCountIndex < numberOfPackagesInThisWave - 1) {
+                    for (let gapIndex = 0; gapIndex < consistentGapBetweenPackagesInWave; gapIndex++) {
+                        logicalGridSpawnQueueArray.push(false);
+                    }
+                }
+            }
+            
+            let interWaveEmptyGridCellsGapLength = Math.floor(Math.random() * 10) + GAME_CONFIGURATION.MINIMUM_GAP_BETWEEN_WAVES_CELLS; 
+            for (let waveGapIndex = 0; waveGapIndex < interWaveEmptyGridCellsGapLength; waveGapIndex++) {
+                logicalGridSpawnQueueArray.push(false);
+            }
+        }
+
+        // ============================================================================
+        // INPUT HANDLING
+        // ============================================================================
+
+        window.addEventListener('keydown', function(keyboardEvent) {
+            const pressedKeyCode = keyboardEvent.code;
+            if (['ArrowUp', 'ArrowDown', 'Space'].includes(pressedKeyCode)) {
+                keyboardEvent.preventDefault();
+            }
+
+            if (currentGameState === GAME_STATE_MENU || currentGameState === GAME_STATE_GAME_OVER) {
+                if (pressedKeyCode === 'Space') {
+                    resetGameDataToDefaults();
+                    currentGameState = GAME_STATE_PLAYING;
+                }
+                return;
+            }
+
+            if (currentGameState === GAME_STATE_PLAYING || currentGameState === GAME_STATE_TRUCK_BREAK || currentGameState === GAME_STATE_DROP_RECOVERY_PAUSE) {
+                if (pressedKeyCode === 'KeyW') {
+                    leftWorkerCurrentElevation = Math.min(WORKER_ELEVATION_TOP, leftWorkerCurrentElevation + 1);
+                } else if (pressedKeyCode === 'KeyS') {
+                    leftWorkerCurrentElevation = Math.max(WORKER_ELEVATION_BOTTOM, leftWorkerCurrentElevation - 1);
+                }
+                
+                if (pressedKeyCode === 'ArrowUp') {
+                    rightWorkerCurrentElevation = Math.min(WORKER_ELEVATION_TOP, rightWorkerCurrentElevation + 1);
+                } else if (pressedKeyCode === 'ArrowDown') {
+                    rightWorkerCurrentElevation = Math.max(WORKER_ELEVATION_BOTTOM, rightWorkerCurrentElevation - 1);
+                }
+            }
+        });
+
+        // ============================================================================
+        // MAIN GAME LOGIC LOOP
+        // ============================================================================
+
+        function updateGameLogic() {
+            globalAnimationTimestamp++;
+
+            for (let floatingTextElementIndex = floatingTextArray.length - 1; floatingTextElementIndex >= 0; floatingTextElementIndex--) {
+                floatingTextArray[floatingTextElementIndex].lifeTimeFramesRemaining--;
+                floatingTextArray[floatingTextElementIndex].positionVertical -= 1; 
+                if (floatingTextArray[floatingTextElementIndex].lifeTimeFramesRemaining <= 0) {
+                    floatingTextArray.splice(floatingTextElementIndex, 1);
+                }
+            }
+
+            if (currentGameState === GAME_STATE_PACKAGE_FALLING) {
+                let allPackagesFinishedFalling = true;
+                for (let index = currentlyFallingPackagesArray.length - 1; index >= 0; index--) {
+                    let fallingPackage = currentlyFallingPackagesArray[index];
+                    fallingPackage.updateVisualPositionInterpolation(); 
+                    
+                    if (fallingPackage.visualVerticalPosition > CANVAS_HEIGHT_PIXELS + 50) {
+                        let activeIndex = activePackagesArray.indexOf(fallingPackage);
+                        if (activeIndex > -1) activePackagesArray.splice(activeIndex, 1);
+                        currentlyFallingPackagesArray.splice(index, 1);
+                    } else {
+                        allPackagesFinishedFalling = false;
+                    }
+                }
+                
+                if (allPackagesFinishedFalling && currentlyFallingPackagesArray.length === 0) {
+                     currentGameState = GAME_STATE_DROP_RECOVERY_PAUSE;
+                     framesRemainingInDropRecoveryPause = GAME_CONFIGURATION.DROP_RECOVERY_PAUSE_FRAMES;
+                }
+                return; 
+            }
+
+            if (currentGameState === GAME_STATE_DROP_RECOVERY_PAUSE) {
+                framesRemainingInDropRecoveryPause -= 1;
+                if (framesRemainingInDropRecoveryPause <= 0) {
+                    if (activePackagesArray.length > 0) {
+                        activePackagesArray.sort((packageA, packageB) => packageB.logicalConveyorBeltIndex * 100 + packageB.logicalCellIndexOnBelt - (packageA.logicalConveyorBeltIndex * 100 + packageA.logicalCellIndexOnBelt));
+                        activePackagesArray.shift(); 
+                        spawnFloatingText("PACKAGE CLEARED", CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2 + 50, '#3498db');
+                    }
+                    
+                    // Slow down conveyor speed slightly to grant forgiveness
+                    currentFramesBetweenLogicalGridMoves = Math.min(GAME_CONFIGURATION.INITIAL_FRAMES_PER_GRID_MOVE, currentFramesBetweenLogicalGridMoves + GAME_CONFIGURATION.SLOW_DOWN_INCREMENT_AFTER_LOSS);
+                    
+                    currentGameState = GAME_STATE_PLAYING;
+                }
+                return; 
+            }
+
+            if (currentGameState === GAME_STATE_TRUCK_BREAK) {
+                truckBreakAnimationTimer++;
+                let driveAwayThreshold = 60;
+                let returnThreshold = GAME_CONFIGURATION.TRUCK_DEPARTURE_PAUSE_FRAMES - 60;
+
+                if (truckBreakAnimationTimer < driveAwayThreshold) {
+                    truckHorizontalOffsetPixels += 5;
+                } 
+                else if (truckBreakAnimationTimer === driveAwayThreshold) { 
+                    packagesLoadedIntoTruck = 0;
+                    truckHorizontalOffsetPixels = -300; 
+                }
+                else if (truckBreakAnimationTimer > returnThreshold && truckBreakAnimationTimer < GAME_CONFIGURATION.TRUCK_DEPARTURE_PAUSE_FRAMES) {
+                    truckHorizontalOffsetPixels += 5;
+                }
+                else if (truckBreakAnimationTimer >= GAME_CONFIGURATION.TRUCK_DEPARTURE_PAUSE_FRAMES) { 
+                    truckHorizontalOffsetPixels = 0;
+                    totalTruckDeparturesCount += 1;
+                    
+                    // Speed up conveyor by reducing frames between ticks
+                    currentFramesBetweenLogicalGridMoves = Math.max(GAME_CONFIGURATION.MINIMUM_FRAMES_PER_GRID_MOVE, currentFramesBetweenLogicalGridMoves - GAME_CONFIGURATION.SPEED_UP_DECREMENT_AFTER_TRUCK); 
+                    
+                    currentGameState = GAME_STATE_PLAYING;
+                }
+                
+                // Continue interpolating positions even while frozen
+                for (let activePackageIndex = 0; activePackageIndex < activePackagesArray.length; activePackageIndex++) {
+                    activePackagesArray[activePackageIndex].updateVisualPositionInterpolation();
+                }
+                return;
+            }
+
+            if (currentGameState === GAME_STATE_PLAYING) {
+                framesSinceLastLogicalGridMove += 1;
+                
+                if (framesSinceLastLogicalGridMove >= currentFramesBetweenLogicalGridMoves) {
+                    framesSinceLastLogicalGridMove = 0;
+                    advanceAllPackagesOneLogicalGridUnit();
+                }
+
+                for (let activePackageIndex = activePackagesArray.length - 1; activePackageIndex >= 0; activePackageIndex--) {
+                    let currentPackage = activePackagesArray[activePackageIndex];
+                    currentPackage.updateVisualPositionInterpolation();
+                    
+                    if (currentPackage.visualVerticalPosition > CANVAS_HEIGHT_PIXELS + 50 || currentPackage.hasBeenSuccessfullyDelivered) {
+                        activePackagesArray.splice(activePackageIndex, 1);
+                    }
+                }
+            }
+        }
+
+        // ============================================================================
+        // GRAPHICS RENDERING (MODULARIZED FOR EASY IMAGE REPLACEMENT)
+        // ============================================================================
+
+        function drawFactoryBackgroundGraphics(graphicsContext) {
+            // REPLACE THIS FUNCTION INTERIOR WITH LATER BACKGROUND IMAGE LOGIC
+            // Example: graphicsContext.drawImage(factoryBackgroundImage, 0, 0);
+
+            graphicsContext.fillStyle = '#2c3e50'; 
+            graphicsContext.fillRect(0, 0, CANVAS_WIDTH_PIXELS, CANVAS_HEIGHT_PIXELS);
+
+            graphicsContext.fillStyle = '#34495e';
+            graphicsContext.fillRect(50, 50, 100, 150);
+            graphicsContext.fillRect(250, 50, 100, 150);
+            graphicsContext.fillRect(450, 50, 100, 150);
+        }
+
+        function drawConveyorBeltGraphic(graphicsContext, verticalYPosition, logicalDirectionMultiplier) {
+            // REPLACE THIS FUNCTION INTERIOR WITH LATER CONVEYOR BELT SPRITE LOGIC
+
+            graphicsContext.lineWidth = 10;
+            graphicsContext.strokeStyle = '#222';
+            graphicsContext.beginPath();
+            graphicsContext.moveTo(CONVEYOR_BELT_START_HORIZONTAL_POSITION, verticalYPosition);
+            graphicsContext.lineTo(CONVEYOR_BELT_END_HORIZONTAL_POSITION, verticalYPosition);
+            graphicsContext.stroke();
+
+            graphicsContext.strokeStyle = '#555';
+            graphicsContext.setLineDash([15, 15]);
+            
+            if (currentGameState === GAME_STATE_PLAYING) {
+                let pixelsTraveledPerFrame = GAME_CONFIGURATION.GRID_CELL_SIZE_PIXELS / Math.max(1, currentFramesBetweenLogicalGridMoves);
+                graphicsContext.lineDashOffset = -(globalAnimationTimestamp * pixelsTraveledPerFrame * logicalDirectionMultiplier);
+            } else {
+                 graphicsContext.lineDashOffset = 0; 
+            }
+
+            graphicsContext.beginPath();
+            graphicsContext.moveTo(CONVEYOR_BELT_START_HORIZONTAL_POSITION, verticalYPosition);
+            graphicsContext.lineTo(CONVEYOR_BELT_END_HORIZONTAL_POSITION, verticalYPosition);
+            graphicsContext.stroke();
+            graphicsContext.setLineDash([]); 
+        }
+
+        function drawCentralObscuringMachineGraphic(graphicsContext) {
+            // REPLACE THIS FUNCTION INTERIOR WITH LATER MACHINE SPRITE LOGIC
+
+            graphicsContext.fillStyle = '#1a252f'; 
+            graphicsContext.fillRect(320, 80, 160, 440); 
+            graphicsContext.strokeStyle = '#0f171e';
+            graphicsContext.lineWidth = 6;
+            graphicsContext.strokeRect(320, 80, 160, 440);
+
+            graphicsContext.fillStyle = '#2c3e50';
+            graphicsContext.fillRect(340, 100, 120, 400);
+
+            graphicsContext.fillStyle = '#f39c12';
+            for(let cautionStripeIndex = 0; cautionStripeIndex < 4; cautionStripeIndex++) {
+                graphicsContext.fillRect(340 + (cautionStripeIndex * 30), 100, 15, 20);
+                graphicsContext.fillRect(340 + (cautionStripeIndex * 30), 480, 15, 20);
+            }
+
+            graphicsContext.fillStyle = '#e74c3c'; 
+            graphicsContext.beginPath();
+            graphicsContext.arc(400, 300, 30, 0, Math.PI * 2);
+            graphicsContext.fill();
+        }
+
+        function drawWorkerGraphic(graphicsContext, horizontalX, verticalY, uniformHexColor, hardhatHexColor) {
+            // REPLACE THIS FUNCTION INTERIOR WITH LATER WORKER SPRITE LOGIC
+            // Center of worker is exactly horizontalX, feet at verticalY
+
+            graphicsContext.fillStyle = uniformHexColor; 
+            graphicsContext.fillRect(horizontalX - 20, verticalY - 60, 40, 60);
+            graphicsContext.fillStyle = hardhatHexColor; 
+            graphicsContext.fillRect(horizontalX - 20, verticalY - 75, 40, 15);
+        }
+
+        function drawDeliveryTruckGraphic(graphicsContext, baseHorizontalX, baseVerticalY) {
+            // REPLACE THIS FUNCTION INTERIOR WITH LATER TRUCK SPRITE LOGIC
+            
+            const finalTruckHorizontalPosition = baseHorizontalX + truckHorizontalOffsetPixels;
+            
+            graphicsContext.fillStyle = '#ecf0f1';
+            graphicsContext.fillRect(finalTruckHorizontalPosition + 80, baseVerticalY - 70, 40, 70);
+            graphicsContext.fillStyle = '#7f8c8d';
+            graphicsContext.fillRect(finalTruckHorizontalPosition, baseVerticalY - 90, 80, 90);
+            graphicsContext.fillStyle = '#111';
+            graphicsContext.beginPath();
+            graphicsContext.arc(finalTruckHorizontalPosition + 20, baseVerticalY, 15, 0, Math.PI * 2);
+            graphicsContext.arc(finalTruckHorizontalPosition + 90, baseVerticalY, 15, 0, Math.PI * 2);
+            graphicsContext.fill();
+
+            graphicsContext.fillStyle = '#8B4513'; 
+            for (let truckLoadedPackageIndex = 0; truckLoadedPackageIndex < packagesLoadedIntoTruck; truckLoadedPackageIndex++) {
+                let packageColumnOffset = (truckLoadedPackageIndex % 4) * 18;
+                let packageRowOffset = Math.floor(truckLoadedPackageIndex / 4) * -20;
+                graphicsContext.fillRect(finalTruckHorizontalPosition + 5 + packageColumnOffset, baseVerticalY - 25 + packageRowOffset, 15, 15);
+            }
+        }
+
+        function drawPackageGraphic(graphicsContext, packageObjectReference) {
+            // REPLACE THIS FUNCTION INTERIOR WITH LATER PACKAGE SPRITE LOGIC
+            
+            graphicsContext.save();
+            graphicsContext.translate(packageObjectReference.visualHorizontalPosition, packageObjectReference.visualVerticalPosition);
+
+            if (packageObjectReference.isCurrentlyTeeteringOnInvisibleEdge) {
+                let tiltMagnitudeRadians = 0.25; 
+                let wobbleSpeed = 0.5;
+                let currentWobble = Math.sin(globalAnimationTimestamp * wobbleSpeed) * 0.05;
+
+                // Determine rotation direction based on which side the overhang is on
+                if (packageObjectReference.logicalConveyorBeltIndex === -1 || 
+                    packageObjectReference.logicalConveyorBeltIndex === 1 || 
+                    packageObjectReference.logicalConveyorBeltIndex === 3) {
+                    graphicsContext.rotate(-tiltMagnitudeRadians + currentWobble); // Left Edge
+                } else {
+                    graphicsContext.rotate(tiltMagnitudeRadians + currentWobble); // Right Edge
+                }
+            } else if (packageObjectReference.isCurrentlyFalling) {
+                 graphicsContext.rotate(packageObjectReference.fallingVerticalVelocity * 0.1); 
+            }
+
+            graphicsContext.fillStyle = '#8B4513'; 
+            graphicsContext.fillRect(-15, -30, 30, 30);
+            graphicsContext.fillStyle = '#D2B48C'; 
+            graphicsContext.fillRect(-15, -20, 30, 10);
+
+            graphicsContext.restore();
+        }
+
+        function renderGameGraphics() {
+            // 1. Background Layer
+            drawFactoryBackgroundGraphics(canvasGraphicsContext);
+
+            // 2. Conveyor Belts Layer
+            drawConveyorBeltGraphic(canvasGraphicsContext, BELT_1_VERTICAL_POSITION, 1);
+            drawConveyorBeltGraphic(canvasGraphicsContext, BELT_2_VERTICAL_POSITION, -1);
+            drawConveyorBeltGraphic(canvasGraphicsContext, BELT_3_VERTICAL_POSITION, 1);
+            drawConveyorBeltGraphic(canvasGraphicsContext, BELT_4_VERTICAL_POSITION, -1);
+            drawConveyorBeltGraphic(canvasGraphicsContext, BELT_5_VERTICAL_POSITION, 1);
+
+            // 3. Delivery Truck Layer
+            drawDeliveryTruckGraphic(canvasGraphicsContext, 670, BELT_5_VERTICAL_POSITION);
+
+            // 4. Packages Layer
+            for (let activePackageIndex = 0; activePackageIndex < activePackagesArray.length; activePackageIndex++) {
+                drawPackageGraphic(canvasGraphicsContext, activePackagesArray[activePackageIndex]);
+            }
+
+            // 5. Central Obscuring Machine Layer (Over Packages)
+            drawCentralObscuringMachineGraphic(canvasGraphicsContext);
+
+            // 6. Workers Layer
+            const leftWorkerVerticalRenderPosition = determineLeftWorkerVerticalDrawingPosition(leftWorkerCurrentElevation);
+            drawWorkerGraphic(canvasGraphicsContext, LEFT_WORKER_HORIZONTAL_POSITION, leftWorkerVerticalRenderPosition, '#3498db', '#f39c12');
+
+            const rightWorkerVerticalRenderPosition = determineRightWorkerVerticalDrawingPosition(rightWorkerCurrentElevation);
+            drawWorkerGraphic(canvasGraphicsContext, RIGHT_WORKER_HORIZONTAL_POSITION, rightWorkerVerticalRenderPosition, '#f1c40f', '#3498db');
+
+            // 7. User Interface Layer
+            canvasGraphicsContext.fillStyle = '#ffffff';
+            canvasGraphicsContext.font = '24px "Segoe UI", sans-serif';
+            canvasGraphicsContext.textAlign = 'left';
+            canvasGraphicsContext.fillText(`SCORE: ${playerTotalScore}`, 20, 35);
+            canvasGraphicsContext.fillText(`HIGH SCORE: ${playerHighScore}`, 20, 65);
+
+            canvasGraphicsContext.textAlign = 'right';
+            canvasGraphicsContext.fillText('DROPS:', CANVAS_WIDTH_PIXELS - 120, 35);
+            for (let missedPackageIndicatorIndex = 0; missedPackageIndicatorIndex < 3; missedPackageIndicatorIndex++) {
+                let indicatorHorizontalPosition = CANVAS_WIDTH_PIXELS - 100 + (missedPackageIndicatorIndex * 30);
+                canvasGraphicsContext.strokeStyle = '#fff';
+                canvasGraphicsContext.lineWidth = 2;
+                canvasGraphicsContext.strokeRect(indicatorHorizontalPosition, 15, 20, 20);
+                if (missedPackageIndicatorIndex < playerTotalMisses) {
+                    canvasGraphicsContext.strokeStyle = '#e74c3c';
+                    canvasGraphicsContext.lineWidth = 4;
+                    canvasGraphicsContext.beginPath();
+                    canvasGraphicsContext.moveTo(indicatorHorizontalPosition + 2, 17);
+                    canvasGraphicsContext.lineTo(indicatorHorizontalPosition + 18, 33);
+                    canvasGraphicsContext.moveTo(indicatorHorizontalPosition + 18, 17);
+                    canvasGraphicsContext.lineTo(indicatorHorizontalPosition + 2, 33);
+                    canvasGraphicsContext.stroke();
+                }
+            }
+
+            canvasGraphicsContext.textAlign = 'center';
+            for (let floatingTextElementIndex = 0; floatingTextElementIndex < floatingTextArray.length; floatingTextElementIndex++) {
+                let floatingTextData = floatingTextArray[floatingTextElementIndex];
+                canvasGraphicsContext.fillStyle = floatingTextData.colorHexCode;
+                canvasGraphicsContext.globalAlpha = floatingTextData.lifeTimeFramesRemaining / 90; 
+                canvasGraphicsContext.font = 'bold 28px "Segoe UI", sans-serif';
+                canvasGraphicsContext.fillText(floatingTextData.textMessage, floatingTextData.positionHorizontal, floatingTextData.positionVertical);
+                canvasGraphicsContext.globalAlpha = 1.0; 
+            }
+
+            // 8. State Overlays Layer
+            if (currentGameState === GAME_STATE_MENU) {
+                canvasGraphicsContext.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                canvasGraphicsContext.fillRect(0, 0, CANVAS_WIDTH_PIXELS, CANVAS_HEIGHT_PIXELS);
+                canvasGraphicsContext.fillStyle = '#ffffff';
+                canvasGraphicsContext.textAlign = 'center';
+                canvasGraphicsContext.font = 'bold 48px sans-serif';
+                canvasGraphicsContext.fillText('FACTORY WORKERS', CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2 - 40);
+                canvasGraphicsContext.font = '24px sans-serif';
+                canvasGraphicsContext.fillStyle = '#f1c40f';
+                canvasGraphicsContext.fillText('CONVEYOR CHAOS', CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2 + 10);
+                canvasGraphicsContext.fillStyle = '#ffffff';
+                canvasGraphicsContext.fillText('Press SPACE to Start Shift', CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2 + 80);
+            } 
+            else if (currentGameState === GAME_STATE_GAME_OVER) {
+                canvasGraphicsContext.fillStyle = 'rgba(200, 0, 0, 0.3)';
+                canvasGraphicsContext.fillRect(0, 0, CANVAS_WIDTH_PIXELS, CANVAS_HEIGHT_PIXELS);
+                canvasGraphicsContext.fillStyle = '#ffffff';
+                canvasGraphicsContext.textAlign = 'center';
+                canvasGraphicsContext.font = 'bold 48px sans-serif';
+                canvasGraphicsContext.fillText('YOU ARE FIRED!', CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2 - 20);
+                canvasGraphicsContext.font = '24px sans-serif';
+                canvasGraphicsContext.fillText(`Final Score: ${playerTotalScore}`, CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2 + 30);
+                canvasGraphicsContext.fillText('Press SPACE to Reapply for Job', CANVAS_WIDTH_PIXELS / 2, CANVAS_HEIGHT_PIXELS / 2 + 80);
+            }
+        }
+
+        // ============================================================================
+        // EXECUTION CYCLE
+        // ============================================================================
+        
+        function gameExecutionLoop() {
+            updateGameLogic();
+            renderGameGraphics();
+            requestAnimationFrame(gameExecutionLoop);
+        }
+        
+        // Start engine
+        requestAnimationFrame(gameExecutionLoop);
+    </script>
+</body>
+</html>
