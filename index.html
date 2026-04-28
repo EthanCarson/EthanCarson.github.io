@@ -486,7 +486,13 @@
               url.includes("youtu.be") ||
               url.includes("vimeo") ||
               url.includes("embed");
-            const isImage = url.match(/\.(jpeg|jpg|gif|png|webp|svg)/i);
+
+            // Refined image detection to catch Google Photos links and standard extensions
+            const isImage =
+              url.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) ||
+              url.includes("googleusercontent.com") ||
+              url.includes("images.unsplash.com");
+
             const activeClass = index === 0 ? "active" : "";
 
             let content = "";
@@ -494,8 +500,12 @@
               const embedUrl = getYouTubeEmbedUrl(url);
               content = `<iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allowfullscreen></iframe>`;
             } else if (isImage) {
-              content = `<img src="${url}" class="w-full h-full object-cover">`;
+              // Wrapped image in a centered flex container with max constraints for guaranteed scaling
+              content = `<div class="w-full h-full flex items-center justify-center bg-black/10">
+                          <img src="${url}" class="max-w-full max-h-full object-contain" style="display: block;">
+                         </div>`;
             } else {
+              // Fallback for actual webpages
               content = `<iframe class="w-full h-full bg-white" src="${url}" frameborder="0"></iframe>`;
             }
 
@@ -607,3 +617,4 @@
     </script>
   </body>
 </html>
+
