@@ -15,7 +15,8 @@
         --deep-black: #111111;
       }
 
-      html, body {
+      html,
+      body {
         scroll-behavior: smooth;
         max-width: 100vw;
         overflow-x: hidden; /* Strongly prevents horizontal scroll */
@@ -35,11 +36,20 @@
 
       /* Shimmer Animation for Ghost Loading */
       @keyframes shimmer {
-        0% { background-position: -1000px 0; }
-        100% { background-position: 1000px 0; }
+        0% {
+          background-position: -1000px 0;
+        }
+        100% {
+          background-position: 1000px 0;
+        }
       }
       .skeleton {
-        background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+        background: linear-gradient(
+          90deg,
+          #2a2a2a 25%,
+          #3a3a3a 50%,
+          #2a2a2a 75%
+        );
         background-size: 1000px 100%;
         animation: shimmer 2s infinite linear;
         border-radius: 4px;
@@ -56,7 +66,11 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 100%);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.25) 0%,
+          rgba(255, 255, 255, 0.05) 100%
+        );
         backdrop-filter: blur(15px);
         -webkit-backdrop-filter: blur(15px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.3);
@@ -73,9 +87,14 @@
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
       }
       @media (min-width: 640px) {
-        .nav-link { font-size: 0.8rem; letter-spacing: 0.1em; }
+        .nav-link {
+          font-size: 0.8rem;
+          letter-spacing: 0.1em;
+        }
       }
-      .nav-link:hover { color: var(--accent-green); }
+      .nav-link:hover {
+        color: var(--accent-green);
+      }
 
       .hero-section {
         background-color: var(--accent-green);
@@ -141,7 +160,9 @@
           border-left-width: 12px;
           box-shadow: 20px 20px 0px rgba(0, 0, 0, 0.5);
         }
-        .hook-text { transform: skewX(15deg); }
+        .hook-text {
+          transform: skewX(15deg);
+        }
       }
 
       .kinetic-panel {
@@ -150,7 +171,9 @@
         z-index: 30;
       }
       @media (min-width: 640px) {
-        .kinetic-panel { margin-bottom: 150px; }
+        .kinetic-panel {
+          margin-bottom: 150px;
+        }
       }
 
       .panel-bg {
@@ -239,7 +262,9 @@
         z-index: 60;
       }
       @media (min-width: 640px) {
-        .carousel-btn { padding: 1.25rem; }
+        .carousel-btn {
+          padding: 1.25rem;
+        }
       }
       .prev-btn {
         left: 0;
@@ -286,11 +311,13 @@
     <!-- Persistent UI Elements -->
     <nav class="glass-nav px-4 sm:px-8">
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-black text-xs shadow-inner shrink-0">
+        <div
+          class="w-8 h-8 rounded-full flex items-center justify-center font-black text-black text-xs shadow-inner shrink-0">
           <img src="logo-fav.png" alt="Logo" />
         </div>
         <!-- Hidden on very small mobile screens to save space -->
-        <span class="hidden sm:block font-bold text-xs uppercase tracking-[0.2em] text-white">
+        <span
+          class="hidden sm:block font-bold text-xs uppercase tracking-[0.2em] text-white">
           Ethan Carson
         </span>
       </div>
@@ -307,7 +334,9 @@
           src="Mebutcool.png"
           alt="Ethan Carson Logo"
           class="w-40 h-40 sm:w-52 sm:h-52 md:w-64 md:h-64 object-cover mx-auto mb-8" />
-        <h1 id="hero-name" class="hero-title-text text-4xl sm:text-6xl md:text-8xl lg:text-9xl mb-2">
+        <h1
+          id="hero-name"
+          class="hero-title-text text-4xl sm:text-6xl md:text-8xl lg:text-9xl mb-2">
           Ethan Carson
         </h1>
         <p
@@ -329,14 +358,15 @@
     <!-- Content Area with Skeletons -->
     <!-- Increased px-4 to px-6 sm:px-8 so the box-shadows don't bleed out of bounds horizontally -->
     <main id="content-main" class="max-w-6xl mx-auto px-6 sm:px-8 pb-40">
-      
       <!-- About Skeleton -->
       <article class="kinetic-panel" id="about">
-        <h2 class="panel-title">Personal Intel</h2>
+        <h2 class="panel-title">About Me</h2>
         <div class="panel-bg" id="about-container">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 items-start">
+          <div
+            class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 items-start">
             <div class="md:col-span-1">
-              <div class="skeleton w-full aspect-[4/5] border-4 border-green-900"></div>
+              <div
+                class="skeleton w-full aspect-[4/5] border-4 border-green-900"></div>
             </div>
             <div class="md:col-span-2 space-y-4">
               <div class="skeleton h-8 w-3/4"></div>
@@ -351,7 +381,9 @@
       <!-- Expertise Skeleton -->
       <section id="expertise" class="kinetic-panel">
         <h2 class="panel-title">Technical Skills</h2>
-        <div id="expertise-list" class="panel-bg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div
+          id="expertise-list"
+          class="panel-bg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div class="skeleton h-20 w-full opacity-50"></div>
           <div class="skeleton h-20 w-full opacity-50"></div>
           <div class="skeleton h-20 w-full opacity-50"></div>
@@ -364,7 +396,8 @@
         <article class="kinetic-panel">
           <h2 class="panel-title">Mission File</h2>
           <div class="panel-bg">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div
+              class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
               <div class="space-y-6">
                 <div class="skeleton h-10 w-1/2"></div>
                 <div class="skeleton h-32 w-full"></div>
@@ -385,9 +418,24 @@
       <div class="max-w-6xl mx-auto">
         <!-- added flex-wrap here for very tight mobile screens -->
         <div class="flex flex-wrap justify-center gap-6 sm:gap-12 mb-12">
-          <a href="#" class="nav-link hover:text-black">YouTube</a>
-          <a href="#" class="nav-link hover:text-black">Facebook</a>
-          <a href="#" class="nav-link hover:text-black">Instagram</a>
+          <a
+            href="https://www.youtube.com/@EthanCarson-e1h"
+            target="_blank"
+            class="nav-link hover:text-black"
+            >YouTube</a
+          >
+          <a
+            href="https://www.facebook.com/ethancarsonprojects/"
+            target="_blank"
+            class="nav-link hover:text-black"
+            >Facebook</a
+          >
+          <a
+            href="https://www.instagram.com/ethancarsonprojects"
+            target="_blank"
+            class="nav-link hover:text-black"
+            >Instagram</a
+          >
         </div>
         <div class="border-t border-white/20 pt-12">
           <p class="font-black text-lg uppercase tracking-tighter mb-2">
@@ -396,8 +444,10 @@
           <p class="text-[10px] opacity-60 uppercase tracking-[0.4em] mb-6">
             New Media Developer & World Builder
           </p>
-          <p class="text-[9px] opacity-40 italic uppercase max-w-md mx-auto px-4">
-            Visual design inspired by kinetic aesthetics. All work &copy; Ethan Carson.
+          <p
+            class="text-[9px] opacity-40 italic uppercase max-w-md mx-auto px-4">
+            Visual design inspired by kinetic aesthetics. All work &copy; Ethan
+            Carson.
           </p>
         </div>
       </div>
@@ -405,10 +455,14 @@
 
     <script>
       const SHEET_URLS = {
-        global: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5a37QH2Pvsvr5yd_JBj5AjdRlDdsh-mW_CSCEP3VPJEZRmQrsugonCCLcsJYnflGm8Cj-uM-WB34n/pub?gid=0&single=true&output=csv",
-        expertise: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5a37QH2Pvsvr5yd_JBj5AjdRlDdsh-mW_CSCEP3VPJEZRmQrsugonCCLcsJYnflGm8Cj-uM-WB34n/pub?gid=2054964978&single=true&output=csv",
-        projects: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5a37QH2Pvsvr5yd_JBj5AjdRlDdsh-mW_CSCEP3VPJEZRmQrsugonCCLcsJYnflGm8Cj-uM-WB34n/pub?gid=831311429&single=true&output=csv",
-        loading: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5a37QH2Pvsvr5yd_JBj5AjdRlDdsh-mW_CSCEP3VPJEZRmQrsugonCCLcsJYnflGm8Cj-uM-WB34n/pub?gid=171451282&single=true&output=csv",
+        global:
+          "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5a37QH2Pvsvr5yd_JBj5AjdRlDdsh-mW_CSCEP3VPJEZRmQrsugonCCLcsJYnflGm8Cj-uM-WB34n/pub?gid=0&single=true&output=csv",
+        expertise:
+          "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5a37QH2Pvsvr5yd_JBj5AjdRlDdsh-mW_CSCEP3VPJEZRmQrsugonCCLcsJYnflGm8Cj-uM-WB34n/pub?gid=2054964978&single=true&output=csv",
+        projects:
+          "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5a37QH2Pvsvr5yd_JBj5AjdRlDdsh-mW_CSCEP3VPJEZRmQrsugonCCLcsJYnflGm8Cj-uM-WB34n/pub?gid=831311429&single=true&output=csv",
+        loading:
+          "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5a37QH2Pvsvr5yd_JBj5AjdRlDdsh-mW_CSCEP3VPJEZRmQrsugonCCLcsJYnflGm8Cj-uM-WB34n/pub?gid=171451282&single=true&output=csv",
       };
 
       document.getElementById("year").textContent = new Date().getFullYear();
@@ -453,7 +507,10 @@
             let val = r[index] || "";
             if (header === "Rating") val = Number(val);
             if (header === "HelpedList" || header === "MediaGallery") {
-              val = val.split(";").map((v) => v.trim()).filter((v) => v !== "");
+              val = val
+                .split(";")
+                .map((v) => v.trim())
+                .filter((v) => v !== "");
             }
             obj[header] = val;
           });
@@ -474,7 +531,8 @@
       }
 
       function getYouTubeEmbedUrl(url) {
-        if (!url.includes("youtube.com") && !url.includes("youtu.be")) return url;
+        if (!url.includes("youtube.com") && !url.includes("youtu.be"))
+          return url;
         let videoId = "";
         try {
           if (url.includes("youtu.be/")) {
@@ -496,8 +554,15 @@
 
         const slides = mediaList
           .map((url, index) => {
-            const isVideo = url.includes("youtube") || url.includes("youtu.be") || url.includes("vimeo") || url.includes("embed");
-            const isImage = url.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || url.includes("googleusercontent.com") || url.includes("images.unsplash.com");
+            const isVideo =
+              url.includes("youtube") ||
+              url.includes("youtu.be") ||
+              url.includes("vimeo") ||
+              url.includes("embed");
+            const isImage =
+              url.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) ||
+              url.includes("googleusercontent.com") ||
+              url.includes("images.unsplash.com");
             const activeClass = index === 0 ? "active" : "";
             let content = "";
 
@@ -544,7 +609,8 @@
         }
 
         const shouldShowRow = (item) => {
-          if (!("IsVisible" in item) || item.IsVisible.trim() === "") return true;
+          if (!("IsVisible" in item) || item.IsVisible.trim() === "")
+            return true;
           const val = item.IsVisible.trim().toUpperCase();
           return val !== "FALSE" && val !== "NO" && val !== "0";
         };
@@ -553,7 +619,8 @@
           const g = gLive[0];
           document.getElementById("hero-name").textContent = g.Name;
           document.getElementById("hero-title").textContent = g.Title;
-          document.getElementById("hero-hook").textContent = g.HeroHook || "Let your worlds come to life.";
+          document.getElementById("hero-hook").textContent =
+            g.HeroHook || "Let your worlds come to life.";
 
           const aboutContainer = document.getElementById("about-container");
           aboutContainer.innerHTML = `
@@ -574,7 +641,8 @@
           eLive.forEach((e) => {
             if (!shouldShowRow(e)) return;
             const el = document.createElement("div");
-            el.className = "bg-white/10 p-5 border border-green-900 group hover:bg-green-500/20 transition";
+            el.className =
+              "bg-white/10 p-5 border border-green-900 group hover:bg-green-500/20 transition";
             el.innerHTML = `<div class="text-[10px] text-green-500 uppercase font-black mb-1">${e.Subcategory || "Core"}</div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-xl font-bold uppercase italic tracking-tighter">${e.Skill}</span>
