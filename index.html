@@ -542,6 +542,15 @@
           if (randomMsg) statusEl.textContent = randomMsg;
         }
 
+        // Helper function to check the visibility toggle for a row
+        const shouldShowRow = (item) => {
+          // If the column "IsVisible" doesn't exist or is completely empty, default to showing it
+          if (!("IsVisible" in item) || item.IsVisible.trim() === "") return true;
+          // If the cell contains FALSE (which is what unchecked checkboxes export as), hide it
+          const val = item.IsVisible.trim().toUpperCase();
+          return val !== "FALSE" && val !== "NO" && val !== "0";
+        };
+
         if (gLive && gLive.length > 0) {
           const g = gLive[0];
           document.getElementById("hero-name").textContent = g.Name;
@@ -566,6 +575,9 @@
           const expList = document.getElementById("expertise-list");
           expList.innerHTML = "";
           eLive.forEach((e) => {
+            // Apply the visibility filter here
+            if (!shouldShowRow(e)) return;
+
             const el = document.createElement("div");
             el.className =
               "bg-white/10 p-5 border border-green-900 group hover:bg-green-500/20 transition";
@@ -583,6 +595,44 @@
           projContainer.innerHTML = "";
           pLive.forEach((p) => {
             if (!p.Title) return;
+
+            // Apply the visibility filter here
+            if (!shouldShowRow(p)) return;
+
+            const card = document.createElement("article");
+            card.className = "kinetic-panel";
+            card.innerHTML = `<h2 class="panel-title">${p.Title}</h2>
+                        <div class="panel-bg">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                                <div>
+                                    <div class="flex gap-4 mb-8">
+                                        <span class="bg-green-500 text-black font-black px-4 py-1 text-xs uppercase italic">${p.Status}</span>
+                                        <span class="text-green-500 font-bold px-4 py-1 text-xs uppercase border border-green-500">${p.Role}</span>
+                                    </div>
+                                    <p class="text-gray-100 text-2xl leading-snug mb-10 font-light italic border-l-4 border-green-500 pl-6">${p.Description}</p>
+                                    <ul class="space-y-3">
+                                        ${p.HelpedList ? p.HelpedList.map((item) => `<li class="flex items-center text-gray-400 text-sm uppercase tracking-wide"><span class="w-3 h-3 bg-green-500 mr-3" style="clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);"></span>${item}</li>`).join("") : ""}
+                                    </ul>
+                                </div>
+                                <div>${buildCarousel(p.MediaGallery)}</div>
+                            </div>
+                        </div>`;
+            projContainer.appendChild(card);
+          });
+        }
+
+        // Smoothly hide status flavor after a moment
+        setTimeout(() => {
+          statusEl.style.opacity = "0";
+          statusEl.style.transition = "opacity 0.5s ease";
+          setTimeout(() => statusEl.remove(), 500);
+        }, 1500);
+      }
+
+      window.onload = init;
+    </script>
+  </body>
+</html>
             const card = document.createElement("article");
             card.className = "kinetic-panel";
             card.innerHTML = `<h2 class="panel-title">${p.Title}</h2>
