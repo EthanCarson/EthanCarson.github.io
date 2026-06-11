@@ -1,676 +1,603 @@
-<!doctype html>
-<!--
-Daily Task Manager
-By: Ethan Carson
-2026
-AI used for rapid prototyping, with human touchups after
--->
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#1a1a18" />
-    <meta
-      name="description"
-      content="Daily Task Manager — focus, track, complete." />
-    <link
-      rel="manifest"
-      href='data:application/json,{"name":"DailyDo","short_name":"DailyDo","start_url":".","display":"standalone","background_color":"%231a1a18","theme_color":"%231a1a18"}' />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=700;900&family=IBM+Plex+Mono:wght=400;500&family=IBM+Plex+Sans:wght=300;400;500&display=swap"
-      rel="stylesheet" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1a18" />
+  <meta name="description" content="Daily Task Manager — focus, track, complete." />
+  <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;DailyDo&quot;,&quot;short_name&quot;:&quot;DailyDo&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%231a1a18&quot;,&quot;theme_color&quot;:&quot;%231a1a18&quot;}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=700;900&family=IBM+Plex+Mono:wght=400;500&family=IBM+Plex+Sans:wght=300;400;500&display=swap" rel="stylesheet" />
 
-    <style>
-      /* ============================================================
+  <style>
+    /* ============================================================
        CSS CUSTOM PROPERTIES — Edit colors, spacing, and fonts here
        ============================================================ */
-      :root {
-        /* --- Color Palette --- */
-        --color-bg: #3b4872; /* page background */
-        --color-surface: #b6d5d7; /* card / panel surface */
-        --color-surface-dim: #98b9d6; /* slightly dimmed surface */
-        --color-ink: #3b4872; /* primary text */
-        --color-ink-muted: #5d599a; /* secondary / muted text */
-        --color-accent: #ac00ac; /* red accent — important tasks */
-        --color-accent-warm: #f78c8c; /* orange accent — in-progress */
-        --color-accent-go: #10e831; /* green — complete */
-        --color-tab-active: #3b4872; /* active tab bg */
-        --color-tab-text: #b6d5d7; /* active tab text */
-        --color-border: #3b4872; /* card/panel borders */
-        --color-pending-bg: #b6d5d7;
-        --color-inprog-bg: #fff3cd;
-        --color-complete-bg: #d4edda;
-        --color-important-bg: #fde8e4;
+    :root {
+      /* --- Color Palette --- */
+      --color-bg:           #3b4872;       /* page background */
+      --color-surface:      #b6d5d7;       /* card / panel surface */
+      --color-surface-dim:  #98b9d6;       /* slightly dimmed surface */
+      --color-ink:          #3b4872;       /* primary text */
+      --color-ink-muted:    #5d599a;       /* secondary / muted text */
+      --color-accent:       #ac00ac;       /* red accent — important tasks */
+      --color-accent-warm:  #f80f0f;       /* orange accent — in-progress */
+      --color-accent-go:    #10e831;       /* green — complete */
+      --color-tab-active:   #3b4872;       /* active tab bg */
+      --color-tab-text:     #b6d5d7;       /* active tab text */
+      --color-border:       #3b4872;       /* card/panel borders */
+      --color-pending-bg:   #b6d5d7;
+      --color-inprog-bg:    #fff3cd;
+      --color-complete-bg:  #d4edda;
+      --color-important-bg: #fde8e4;
 
-        /* --- Typography --- */
-        --font-display: "Playfair Display", Georgia, serif;
-        --font-mono: "IBM Plex Mono", "Courier New", monospace;
-        --font-body: "IBM Plex Sans", system-ui, sans-serif;
+      /* --- Typography --- */
+      --font-display:  'Playfair Display', Georgia, serif;
+      --font-mono:     'IBM Plex Mono', 'Courier New', monospace;
+      --font-body:     'IBM Plex Sans', system-ui, sans-serif;
 
-        /* --- Spacing --- */
-        --space-xs: 4px;
-        --space-sm: 8px;
-        --space-md: 16px;
-        --space-lg: 24px;
-        --space-xl: 100px;
+      /* --- Spacing --- */
+      --space-xs:  4px;
+      --space-sm:  8px;
+      --space-md:  16px;
+      --space-lg:  24px;
+      --space-xl:  100px;
 
-        /* --- Borders & Radii --- */
-        --border-width: 8px;
-        --border: var(--border-width) solid var(--color-border);
-        --radius-sm: 4px;
-        --radius-md: 8px;
+      /* --- Borders & Radii --- */
+      --border-width: 8px;
+      --border:       var(--border-width) solid var(--color-border);
+      --radius-sm:    4px;
+      --radius-md:    8px;
 
-        /* --- Shadows --- */
-        --shadow-card: 4px 4px 0px var(--color-border);
-        --shadow-btn: 2px 2px 0px var(--color-border);
+      /* --- Shadows --- */
+      --shadow-card: 4px 4px 0px var(--color-border);
+      --shadow-btn:  2px 2px 0px var(--color-border);
 
-        /* --- Layout grid dimensions --- */
-        --panel-max-w: 560px;
-      }
+      /* --- Layout grid dimensions --- */
+      --panel-max-w:     560px;
+    }
 
-      /* ============================================================
+    /* ============================================================
        RESET & BASE
        ============================================================ */
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      html,
-      body {
-        width: 100%;
-        height: 100%;
-        background: url("main.png");
-        background-size: cover;
-        background-repeat: no-repeat;
-        color: var(--color-ink);
-        font-family: var(--font-body);
-        font-size: 15px;
-        line-height: 1.5;
-        -webkit-font-smoothing: antialiased;
-      }
+    html, body {
+      width: 100%; height: 100%;
+      background: url('amogus.png');
+      background-size: cover;
+      background-repeat: no-repeat;
+      color: var(--color-ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
 
-      /* ============================================================
+
+    /* ============================================================
        PAGE LAYOUT — 3×3 GRID (desktop)
        ============================================================ */
-      #app-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: repeat(3, 1fr);
-        height: 100vh;
-        padding: 8vw 5vw 5vw 8vw;
-        gap: 0;
-        box-sizing: border-box;
-      }
+    #app-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      height: 100vh;
+      padding: 8vw 5vw 5vw 8vw;
+      gap: 0;
+      box-sizing: border-box;
+    }
 
-      /* Functional block spans top-left → mid-center (2 cols × 2 rows) */
-      #functional-block {
-        grid-column: 1 / 3;
-        grid-row: 1 / 3;
-        display: flex;
-        flex-direction: column;
-        max-width: 100%;
-        min-height: 0; /* enables scrolling to respect the bounds */
-      }
+    /* Functional block spans top-left → mid-center (2 cols × 2 rows) */
+    #functional-block {
+      grid-column: 1 / 3;
+      grid-row: 1 / 3;
+      display: flex;
+      flex-direction: column;
+      max-width: 100%;
+      min-height: 0; /* enables scrolling to respect the bounds */
+    }
 
-      /* ============================================================
+
+    /* ============================================================
        SIMPLIFIED UI — removes grid constraints
        ============================================================ */
-      body.simplified #app-grid {
-        display: block;
-        padding: 0;
-        height: auto;
-        min-height: 100vh;
-      }
-      body.simplified #functional-block {
-        max-width: 100%;
-        height: auto;
-        min-height: 100vh;
-      }
+    body.simplified #app-grid {
+      display: block;
+      padding: 0;
+      height: auto;
+      min-height: 100vh;
+    }
+    body.simplified #functional-block {
+      max-width: 100%;
+      height: auto;
+      min-height: 100vh;
+    }
 
-      /* ============================================================
+
+    /* ============================================================
        TAB BAR
        ============================================================ */
-      #tab-bar {
-        display: flex;
-        gap: 2px;
-        margin-bottom: 0;
-      }
+    #tab-bar {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 0;
+    }
 
-      .tab-button {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        font-weight: 500;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        padding: var(--space-sm) var(--space-md);
-        background: rgba(245, 240, 232, 0.07);
-        color: rgba(245, 240, 232, 0.45);
-        border: 1px solid rgba(245, 240, 232, 0.1);
-        border-bottom: none;
-        cursor: pointer;
-        transition:
-          background 0.15s,
-          color 0.15s;
-        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-      }
+    .tab-button {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: var(--space-sm) var(--space-md);
+      background: rgba(245,240,232,0.07);
+      color: rgba(245,240,232,0.45);
+      border: 1px solid rgba(245,240,232,0.1);
+      border-bottom: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    }
 
-      .tab-button:hover {
-        background: rgba(245, 240, 232, 0.13);
-        color: rgba(245, 240, 232, 0.8);
-      }
+    .tab-button:hover {
+      background: rgba(245,240,232,0.13);
+      color: rgba(245,240,232,0.8);
+    }
 
-      .tab-button.active {
-        background: var(--color-surface);
-        color: var(--color-ink);
-        border: var(--border-width) solid var(--color-tab-active);
-        border-bottom: none;
-        font-weight: 700;
-      }
+    .tab-button.active {
+      background: var(--color-surface);
+      color: var(--color-ink);
+      border: var(--border-width) solid var(--color-tab-active);
+      border-bottom: none;
+      font-weight: 700;
+    }
 
-      /* Tab 3 hidden when music disabled */
-      .tab-button.hidden {
-        display: none;
-      }
+    /* Tab 3 hidden when music disabled */
+    .tab-button.hidden { display: none; }
 
-      /* ============================================================
+    /* ============================================================
        MAIN PANEL
        ============================================================ */
-      #main-panel {
-        background: var(--color-surface);
-        border: var(--border);
-        border-top: none; /* Merged seamlessly below the tabs */
-        flex: 1;
-        min-height: 0; /* Allow container to shrink */
-        max-height: none; /* Height is purely grid-bound now */
-        overflow-y: auto;
-        position: relative;
-      }
+    #main-panel {
+      background: var(--color-surface);
+      border: var(--border);
+      border-top: none; /* Merged seamlessly below the tabs */
+      flex: 1;
+      min-height: 0; /* Allow container to shrink */
+      max-height: none; /* Height is purely grid-bound now */
+      overflow-y: auto;
+      position: relative;
+    }
 
-      body.simplified #main-panel {
-        max-height: none;
-        min-height: 80vh;
-      }
+    body.simplified #main-panel {
+      max-height: none;
+      min-height: 80vh;
+    }
 
-      .tab-content {
-        display: none;
-        padding: var(--space-lg);
-        height: 100%;
-      }
+    .tab-content {
+      display: none;
+      padding: var(--space-lg);
+      height: 100%;
+    }
 
-      .tab-content.active {
-        display: block;
-      }
+    .tab-content.active {
+      display: block;
+    }
 
-      /* ============================================================
+    /* ============================================================
        SECTION HEADERS inside panels
        ============================================================ */
-      .section-heading {
-        font-family: var(--font-mono);
-        font-size: 10px;
-        font-weight: 500;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: var(--color-ink-muted);
-        margin-bottom: var(--space-md);
-        padding-bottom: var(--space-xs);
-        border-bottom: 1px solid var(--color-surface-dim);
-      }
+    .section-heading {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--color-ink-muted);
+      margin-bottom: var(--space-md);
+      padding-bottom: var(--space-xs);
+      border-bottom: 1px solid var(--color-surface-dim);
+    }
 
-      /* ============================================================
+    /* ============================================================
        TASK CARD
        ============================================================ */
-      .task-card {
-        background: var(--color-pending-bg);
-        border: var(--border);
-        box-shadow: var(--shadow-card);
-        border-radius: var(--radius-sm);
-        padding: var(--space-md);
-        margin-bottom: var(--space-md);
-        transition:
-          box-shadow 0.12s,
-          transform 0.12s;
-        position: relative;
-      }
+    .task-card {
+      background: var(--color-pending-bg);
+      border: var(--border);
+      box-shadow: var(--shadow-card);
+      border-radius: var(--radius-sm);
+      padding: var(--space-md);
+      margin-bottom: var(--space-md);
+      transition: box-shadow 0.12s, transform 0.12s;
+      position: relative;
+    }
 
-      .task-card:hover {
-        box-shadow: 6px 6px 0px var(--color-border);
-        transform: translate(-1px, -1px);
-      }
+    .task-card:hover {
+      box-shadow: 6px 6px 0px var(--color-border);
+      transform: translate(-1px, -1px);
+    }
 
-      /* Status color overrides */
-      .task-card.status-inProgress {
-        background: var(--color-inprog-bg);
-      }
-      .task-card.status-complete {
-        background: var(--color-complete-bg);
-      }
-      .task-card.is-important {
-        background: var(--color-important-bg);
-      }
-      .task-card.is-important.status-complete {
-        background: var(--color-complete-bg);
-      }
+    /* Status color overrides */
+    .task-card.status-inProgress  { background: var(--color-inprog-bg); }
+    .task-card.status-complete    { background: var(--color-complete-bg); }
+    .task-card.is-important       { background: var(--color-important-bg); }
+    .task-card.is-important.status-complete { background: var(--color-complete-bg); }
 
-      .task-card-name {
-        font-family: var(--font-body);
-        font-weight: 500;
-        font-size: 1rem;
-        color: var(--color-ink);
-        margin-bottom: var(--space-xs);
-      }
+    .task-card-name {
+      font-family: var(--font-body);
+      font-weight: 500;
+      font-size: 1rem;
+      color: var(--color-ink);
+      margin-bottom: var(--space-xs);
+    }
 
-      .task-card-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-xs);
-        margin-bottom: var(--space-sm);
-      }
+    .task-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      margin-bottom: var(--space-sm);
+    }
 
-      .task-tag {
-        font-family: var(--font-mono);
-        font-size: 9px;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        padding: 2px 6px;
-        border-radius: 2px;
-        border: 1px solid currentColor;
-      }
+    .task-tag {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 2px;
+      border: 1px solid currentColor;
+    }
 
-      .task-tag.important {
-        color: var(--color-accent);
-      }
-      .task-tag.recurring {
-        color: var(--color-ink-muted);
-      }
-      .task-tag.always {
-        color: var(--color-accent-warm);
-      }
-      .task-tag.scheduled {
-        color: #5b7fa6;
-      }
+    .task-tag.important { color: var(--color-accent); }
+    .task-tag.recurring { color: var(--color-ink-muted); }
+    .task-tag.always    { color: var(--color-accent-warm); }
+    .task-tag.scheduled { color: #5b7fa6; }
 
-      .task-card-actions {
-        display: flex;
-        gap: var(--space-sm);
-        flex-wrap: wrap;
-      }
+    .task-card-actions {
+      display: flex;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
 
-      /* ============================================================
+    /* ============================================================
        BUTTONS
        ============================================================ */
-      .btn {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        font-weight: 500;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        padding: 5px 12px;
-        border: var(--border);
-        border-radius: var(--radius-sm);
-        /* box-shadow: var(--shadow-btn); */
-        cursor: pointer;
-        background: var(--color-surface);
-        color: var(--color-ink);
-        transition:
-          box-shadow 0.1s,
-          transform 0.1s,
-          background 0.1s;
-      }
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border: var(--border);
+      border-radius: var(--radius-sm);
+      /* box-shadow: var(--shadow-btn); */
+      cursor: pointer;
+      background: var(--color-surface);
+      color: var(--color-ink);
+      transition: box-shadow 0.1s, transform 0.1s, background 0.1s;
+    }
 
-      .btn:hover {
-        background-color: var(--color-surface-dim);
-      }
+    .btn:hover {
+      background-color: var(--color-surface-dim);
+    }
 
-      .btn:active {
-        box-shadow: 1px 1px 0px var(--color-border);
-        transform: translate(1px, 1px);
-      }
+    .btn:active {
+      box-shadow: 1px 1px 0px var(--color-border);
+      transform: translate(1px, 1px);
+    }
 
-      .btn-danger {
-        background: var(--color-accent);
-        /* color: #fff; */
-        border-color: var(--color-accent);
-      }
+    .btn-danger {
+      background: var(--color-accent);
+      /* color: #fff; */
+      border-color: var(--color-accent);
+    }
 
-      .btn-success {
-        background: var(--color-accent-go);
-        /* color: #fff; */
-        border-color: var(--color-accent-go);
-      }
+    .btn-success {
+      background: var(--color-accent-go);
+      /* color: #fff; */
+      border-color: var(--color-accent-go);
+    }
 
-      .btn-warn {
-        background: var(--color-accent-warm);
-        /* color: #fff; */
-        border-color: var(--color-accent-warm);
-      }
+    .btn-warn {
+      background: var(--color-accent-warm);
+      /* color: #fff; */
+      border-color: var(--color-accent-warm);
+    }
 
-      .btn-full {
-        width: 100%;
-        text-align: center;
-        margin-bottom: var(--space-md);
-      }
+    .btn-full {
+      width: 100%;
+      text-align: center;
+      margin-bottom: var(--space-md);
+    }
 
-      /* ============================================================
+    /* ============================================================
        ADD TASK BUTTON (top of Today tab)
        ============================================================ */
-      #add-task-today-btn,
-      #add-task-manage-btn {
-        margin-bottom: var(--space-md);
-      }
+    #add-task-today-btn, #add-task-manage-btn {
+      margin-bottom: var(--space-md);
+    }
 
-      /* ============================================================
+    /* ============================================================
        TASK FORM (full-panel overlay)
        ============================================================ */
-      .task-form-panel {
-        display: none;
-        position: absolute;
-        inset: 0;
-        background: var(--color-surface);
-        padding: var(--space-lg);
-        overflow-y: auto;
-        z-index: 10;
-      }
+    .task-form-panel {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: var(--color-surface);
+      padding: var(--space-lg);
+      overflow-y: auto;
+      z-index: 10;
+    }
 
-      .task-form-panel.visible {
-        display: block;
-      }
+    .task-form-panel.visible {
+      display: block;
+    }
 
-      .form-row {
-        margin-bottom: var(--space-md);
-      }
+    .form-row {
+      margin-bottom: var(--space-md);
+    }
 
-      .form-label {
-        display: block;
-        font-family: var(--font-mono);
-        font-size: 10px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: var(--color-ink-muted);
-        margin-bottom: 4px;
-      }
+    .form-label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--color-ink-muted);
+      margin-bottom: 4px;
+    }
 
-      .form-input,
-      .form-select {
-        width: 100%;
-        border: var(--border);
-        background: var(--color-surface);
-        color: var(--color-ink);
-        font-family: var(--font-body);
-        font-size: 14px;
-        padding: 8px 10px;
-        border-radius: var(--radius-sm);
-        outline: none;
-        transition: box-shadow 0.1s;
-      }
+    .form-input,
+    .form-select {
+      width: 100%;
+      border: var(--border);
+      background: var(--color-surface);
+      color: var(--color-ink);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: box-shadow 0.1s;
+    }
 
-      .form-input:focus,
-      .form-select:focus {
-        box-shadow: 3px 3px 0px var(--color-border);
-      }
+    .form-input:focus,
+    .form-select:focus {
+      box-shadow: 3px 3px 0px var(--color-border);
+    }
 
-      .form-checkbox-row {
-        display: flex;
-        align-items: center;
-        gap: var(--space-sm);
-        font-family: var(--font-body);
-        font-size: 14px;
-        cursor: pointer;
-      }
+    .form-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-family: var(--font-body);
+      font-size: 14px;
+      cursor: pointer;
+    }
 
-      .form-checkbox-row input[type="checkbox"] {
-        width: 16px;
-        height: 16px;
-        accent-color: var(--color-ink);
-        cursor: pointer;
-      }
+    .form-checkbox-row input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: var(--color-ink);
+      cursor: pointer;
+    }
 
-      .days-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-xs);
-        margin-top: var(--space-xs);
-      }
+    .days-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      margin-top: var(--space-xs);
+    }
 
-      .day-chip {
-        font-family: var(--font-mono);
-        font-size: 10px;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        padding: 4px 8px;
-        border: var(--border);
-        border-radius: var(--radius-sm);
-        cursor: pointer;
-        background: var(--color-surface);
-        color: var(--color-ink-muted);
-        user-select: none;
-        transition:
-          background 0.1s,
-          color 0.1s;
-      }
+    .day-chip {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border: var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      background: var(--color-surface);
+      color: var(--color-ink-muted);
+      user-select: none;
+      transition: background 0.1s, color 0.1s;
+    }
 
-      .day-chip.selected {
-        background: var(--color-ink);
-        color: var(--color-surface);
-      }
+    .day-chip.selected {
+      background: var(--color-ink);
+      color: var(--color-surface);
+    }
 
-      .form-actions {
-        display: flex;
-        gap: var(--space-sm);
-        margin-top: var(--space-lg);
-      }
+    .form-actions {
+      display: flex;
+      gap: var(--space-sm);
+      margin-top: var(--space-lg);
+    }
 
-      /* ============================================================
+    /* ============================================================
        MANAGE TASKS TAB — task rows
        ============================================================ */
-      .manage-task-row {
-        border: var(--border);
-        border-radius: var(--radius-sm);
-        padding: var(--space-md);
-        margin-bottom: var(--space-sm);
-        background: var(--color-surface-dim);
-        box-shadow: var(--shadow-card);
-      }
+    .manage-task-row {
+      border: var(--border);
+      border-radius: var(--radius-sm);
+      padding: var(--space-md);
+      margin-bottom: var(--space-sm);
+      background: var(--color-surface-dim);
+      box-shadow: var(--shadow-card);
+    }
 
-      .manage-task-row.is-important {
-        background: var(--color-important-bg);
-      }
-      .manage-task-row.always-appear {
-        border-left: 4px solid var(--color-accent-warm);
-      }
+    .manage-task-row.is-important { background: var(--color-important-bg); }
+    .manage-task-row.always-appear { border-left: 4px solid var(--color-accent-warm); }
 
-      .manage-task-name {
-        font-weight: 500;
-        font-size: 0.95rem;
-        margin-bottom: var(--space-sm);
-      }
+    .manage-task-name {
+      font-weight: 500;
+      font-size: 0.95rem;
+      margin-bottom: var(--space-sm);
+    }
 
-      .manage-task-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-xs);
-        align-items: center;
-      }
+    .manage-task-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      align-items: center;
+    }
 
-      .toggle-pill {
-        font-family: var(--font-mono);
-        font-size: 10px;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        padding: 3px 8px;
-        border: var(--border);
-        border-radius: 20px;
-        cursor: pointer;
-        background: var(--color-surface);
-        color: var(--color-ink-muted);
-        transition:
-          background 0.1s,
-          color 0.1s;
-        user-select: none;
-      }
+    .toggle-pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border: var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      background: var(--color-surface);
+      color: var(--color-ink-muted);
+      transition: background 0.1s, color 0.1s;
+      user-select: none;
+    }
 
-      .toggle-pill.on {
-        background: var(--color-ink);
-        color: var(--color-surface);
-      }
-      .toggle-pill.important-on {
-        background: var(--color-accent);
-        color: #fff;
-        border-color: var(--color-accent);
-      }
-      .toggle-pill.always-on {
-        background: var(--color-accent-warm);
-        color: #fff;
-        border-color: var(--color-accent-warm);
-      }
+    .toggle-pill.on { background: var(--color-ink); color: var(--color-surface); }
+    .toggle-pill.important-on { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+    .toggle-pill.always-on { background: var(--color-accent-warm); color: #fff; border-color: var(--color-accent-warm); }
 
-      .manage-days {
-        font-family: var(--font-mono);
-        font-size: 10px;
-        color: var(--color-ink-muted);
-        margin-top: var(--space-xs);
-      }
+    .manage-days {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--color-ink-muted);
+      margin-top: var(--space-xs);
+    }
 
-      /* Inline day editor inside manage rows */
-      .inline-days-editor {
-        display: none;
-        margin-top: var(--space-sm);
-        padding: var(--space-sm);
-        background: var(--color-surface);
-        border: 1px dashed var(--color-ink-muted);
-        border-radius: var(--radius-sm);
-      }
+    /* Inline day editor inside manage rows */
+    .inline-days-editor {
+      display: none;
+      margin-top: var(--space-sm);
+      padding: var(--space-sm);
+      background: var(--color-surface);
+      border: 1px dashed var(--color-ink-muted);
+      border-radius: var(--radius-sm);
+    }
 
-      .inline-days-editor.visible {
-        display: block;
-      }
+    .inline-days-editor.visible {
+      display: block;
+    }
 
-      .inline-days-editor .days-grid {
-        margin-top: var(--space-xs);
-      }
+    .inline-days-editor .days-grid {
+      margin-top: var(--space-xs);
+    }
 
-      .inline-days-editor-label {
-        font-family: var(--font-mono);
-        font-size: 9px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: var(--color-ink-muted);
-        margin-bottom: var(--space-xs);
-      }
+    .inline-days-editor-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--color-ink-muted);
+      margin-bottom: var(--space-xs);
+    }
 
-      .inline-days-actions {
-        display: flex;
-        gap: var(--space-xs);
-        margin-top: var(--space-sm);
-      }
+    .inline-days-actions {
+      display: flex;
+      gap: var(--space-xs);
+      margin-top: var(--space-sm);
+    }
 
-      /* ============================================================
+    /* ============================================================
        MUSIC PLAYER TAB
        ============================================================ */
-      #music-player {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: var(--space-lg);
-        padding: var(--space-xl) var(--space-lg);
-        height: 100%;
-      }
+    #music-player {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-lg);
+      padding: var(--space-xl) var(--space-lg);
+      height: 100%;
+    }
 
-      #music-disc {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        border: var(--border-width) solid var(--color-border);
-        box-shadow: var(--shadow-card);
-        background: repeating-radial-gradient(
-          circle at center,
-          var(--color-surface-dim) 0px,
-          var(--color-surface-dim) 4px,
-          var(--color-surface) 4px,
-          var(--color-surface) 8px
-        );
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.1s;
-      }
+    #music-disc {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      border: var(--border-width) solid var(--color-border);
+      box-shadow: var(--shadow-card);
+      background: repeating-radial-gradient(
+        circle at center,
+        var(--color-surface-dim) 0px, var(--color-surface-dim) 4px,
+        var(--color-surface) 4px, var(--color-surface) 8px
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s;
+    }
 
-      #music-disc.spinning {
-        animation: spin 3s linear infinite;
-      }
+    #music-disc.spinning {
+      animation: spin 3s linear infinite;
+    }
 
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-      #music-disc-center {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--color-ink);
-      }
+    #music-disc-center {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--color-ink);
+    }
 
-      #music-track-title {
-        font-family: var(--font-display);
-        font-size: 1.3rem;
-        font-weight: 700;
-        text-align: center;
-        color: var(--color-ink);
-        max-width: 280px;
-      }
+    #music-track-title {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--color-ink);
+      max-width: 280px;
+    }
 
-      #music-track-index {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        color: var(--color-ink-muted);
-        letter-spacing: 2px;
-      }
+    #music-track-index {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-ink-muted);
+      letter-spacing: 2px;
+    }
 
-      .music-controls {
-        display: flex;
-        gap: var(--space-md);
-        align-items: center;
-      }
+    .music-controls {
+      display: flex;
+      gap: var(--space-md);
+      align-items: center;
+    }
 
-      /* ============================================================
+    /* ============================================================
        SETTINGS TAB
        ============================================================ */
-      .settings-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: var(--space-md) 0;
-        border-bottom: 1px solid var(--color-surface-dim);
-      }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-md) 0;
+      border-bottom: 1px solid var(--color-surface-dim);
+    }
 
-      .settings-row:last-child {
-        border-bottom: none;
-      }
+    .settings-row:last-child { border-bottom: none; }
 
-      .settings-label {
-        font-weight: 500;
-        font-size: 0.95rem;
-      }
+    .settings-label {
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
 
-      .settings-desc {
-        font-size: 12px;
-        color: var(--color-ink-muted);
-        margin-top: 2px;
-        font-family: var(--font-mono);
-      }
+    .settings-desc {
+      font-size: 12px;
+      color: var(--color-ink-muted);
+      margin-top: 2px;
+      font-family: var(--font-mono);
+    }
 
-      /* ============================================================
+    /* ============================================================
        CUSTOM TOGGLE SWITCH (NOT USED - REPLACED WITH CHECKBOXES)
        ============================================================ */
-      /*
+    /*
     .toggle-switch {
       position: relative;
       width: 44px;
@@ -707,1459 +634,1105 @@ AI used for rapid prototyping, with human touchups after
     }
     */
 
-      /* ============================================================
+    /* ============================================================
        EMPTY STATE
        ============================================================ */
-      .empty-state {
-        text-align: center;
-        padding: var(--space-xl);
-        color: var(--color-ink-muted);
-        font-family: var(--font-mono);
-        font-size: 12px;
-        letter-spacing: 1px;
-      }
+    .empty-state {
+      text-align: center;
+      padding: var(--space-xl);
+      color: var(--color-ink-muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
 
-      .empty-state-icon {
-        font-size: 2rem;
-        margin-bottom: var(--space-md);
-        opacity: 0.3;
-      }
+    .empty-state-icon {
+      font-size: 2rem;
+      margin-bottom: var(--space-md);
+      opacity: 0.3;
+    }
 
-      /* ============================================================
+    /* ============================================================
        CUSTOM MODAL & POPUP DIALOGS (To replace alert/confirm)
        ============================================================ */
-      .custom-modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(26, 26, 24, 0.85);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease;
-      }
+    .custom-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(26, 26, 24, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
 
-      .custom-modal-overlay.active {
-        opacity: 1;
-        pointer-events: auto;
-      }
+    .custom-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
 
-      .custom-modal-box {
-        background: var(--color-surface);
-        border: var(--border);
-        box-shadow: 8px 8px 0px var(--color-border);
-        border-radius: var(--radius-sm);
-        max-width: 420px;
-        width: 90%;
-        padding: var(--space-lg);
-        transform: translateY(12px);
-        transition: transform 0.2s ease;
-      }
+    .custom-modal-box {
+      background: var(--color-surface);
+      border: var(--border);
+      box-shadow: 8px 8px 0px var(--color-border);
+      border-radius: var(--radius-sm);
+      max-width: 420px;
+      width: 90%;
+      padding: var(--space-lg);
+      transform: translateY(12px);
+      transition: transform 0.2s ease;
+    }
 
-      .custom-modal-overlay.active .custom-modal-box {
-        transform: translateY(0);
-      }
+    .custom-modal-overlay.active .custom-modal-box {
+      transform: translateY(0);
+    }
 
-      .custom-modal-title {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        color: var(--color-accent);
-        margin-bottom: var(--space-sm);
-      }
+    .custom-modal-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--color-accent);
+      margin-bottom: var(--space-sm);
+    }
 
-      .custom-modal-message {
-        font-family: var(--font-body);
-        font-size: 14px;
-        color: var(--color-ink);
-        margin-bottom: var(--space-lg);
-      }
+    .custom-modal-message {
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--color-ink);
+      margin-bottom: var(--space-lg);
+    }
 
-      .custom-modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--space-sm);
-      }
+    .custom-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-sm);
+    }
 
-      /* ============================================================
+    /* ============================================================
        INTEGRATED DIAGNOSTICS & DEBUGGING TOOL
        ============================================================ */
-      #diagnostics-panel {
-        position: fixed;
-        bottom: var(--space-md);
-        right: var(--space-md);
-        width: 340px;
-        max-height: 250px;
-        background: #111;
-        color: #0f0;
-        border: 2px solid #333;
-        border-radius: var(--radius-sm);
-        font-family: var(--font-mono);
-        font-size: 11px;
-        z-index: 10000;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        opacity: 0.95;
-      }
+    #diagnostics-panel {
+      position: fixed;
+      bottom: var(--space-md);
+      right: var(--space-md);
+      width: 340px;
+      max-height: 250px;
+      background: #111;
+      color: #0f0;
+      border: 2px solid #333;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      z-index: 10000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      opacity: 0.95;
+    }
 
-      .diagnostics-header {
-        background: #222;
-        padding: var(--space-sm);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        border-bottom: 1px solid #333;
-        color: #fff;
-      }
+    .diagnostics-header {
+      background: #222;
+      padding: var(--space-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #333;
+      color: #fff;
+    }
 
-      .diagnostics-body {
-        flex: 1;
-        padding: var(--space-sm);
-        overflow-y: auto;
-        white-space: pre-wrap;
-        word-break: break-all;
-      }
+    .diagnostics-body {
+      flex: 1;
+      padding: var(--space-sm);
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
 
-      .diagnostics-log-line {
-        margin-bottom: 4px;
-        border-bottom: 1px dashed #222;
-        padding-bottom: 4px;
-      }
+    .diagnostics-log-line {
+      margin-bottom: 4px;
+      border-bottom: 1px dashed #222;
+      padding-bottom: 4px;
+    }
 
-      .diag-err {
-        color: #ff5555;
-      }
-      .diag-warn {
-        color: #ffaa00;
-      }
-      .diag-info {
-        color: #55ff55;
-      }
+    .diag-err { color: #ff5555; }
+    .diag-warn { color: #ffaa00; }
+    .diag-info { color: #55ff55; }
 
-      /* ============================================================
+    /* ============================================================
        SCROLLBAR STYLE
        ============================================================ */
-      #main-panel::-webkit-scrollbar {
-        width: 6px;
-      }
-      #main-panel::-webkit-scrollbar-track {
-        background: var(--color-surface-dim);
-      }
-      #main-panel::-webkit-scrollbar-thumb {
-        background: var(--color-ink-muted);
-        border-radius: 3px;
-      }
+    #main-panel::-webkit-scrollbar { width: 6px; }
+    #main-panel::-webkit-scrollbar-track { background: var(--color-surface-dim); }
+    #main-panel::-webkit-scrollbar-thumb {
+      background: var(--color-ink-muted);
+      border-radius: 3px;
+    }
 
-      /* ============================================================
+    /* ============================================================
        MOBILE — ≤ 540px: 3 rows, UI in rows 1 and 2
        ============================================================ */
-      @media (max-width: 1000px) {
-        #app-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          grid-template-rows: repeat(3, 1fr);
-          padding: 10vw;
-          height: 100vh;
-          box-sizing: border-box;
-        }
-        body {
-          background: url("main-mob.png");
-          background-size: cover;
-          background-repeat: no-repeat;
-        }
-        #functional-block {
-          grid-column: 1;
-          grid-row: 1 / 3;
-          max-width: 100%;
-          min-height: 0;
-        }
-
-        #main-panel {
-          max-height: none;
-        }
-
-        .tab-button {
-          font-size: 10px;
-          padding: var(--space-xs) var(--space-sm);
-          letter-spacing: 0.5px;
-        }
-
-        #diagnostics-panel {
-          width: calc(100% - 32px);
-          left: 16px;
-          right: 16px;
-          bottom: 16px;
-        }
+    @media (max-width: 1000px) {
+      #app-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(3, 1fr);
+        padding: 10vw;
+        height: 100vh;
+        box-sizing: border-box;
+      }
+      body {
+        background: url('amogus-mob.png');
+        background-size: cover;
+        background-repeat: no-repeat;
+      }
+      #functional-block {
+        grid-column: 1;
+        grid-row: 1 / 3;
+        max-width: 100%;
+        min-height: 0;
       }
 
-      /* ============================================================
+      #main-panel {
+        max-height: none;
+      }
+
+      .tab-button {
+        font-size: 10px;
+        padding: var(--space-xs) var(--space-sm);
+        letter-spacing: 0.5px;
+      }
+
+      #diagnostics-panel {
+        width: calc(100% - 32px);
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+      }
+    }
+
+    /* ============================================================
        UTILITY
        ============================================================ */
-      .hidden {
-        display: none !important;
-      }
-      .text-muted {
-        color: var(--color-ink-muted);
-      }
-      .strikethrough {
-        text-decoration: line-through;
-        opacity: 0.55;
-      }
-      .mt-sm {
-        margin-top: var(--space-sm);
-      }
-      .mt-md {
-        margin-top: var(--space-md);
-      }
-      .flex-row {
-        display: flex;
-        gap: var(--space-sm);
-        align-items: center;
-      }
+    .hidden { display: none !important; }
+    .text-muted { color: var(--color-ink-muted); }
+    .strikethrough { text-decoration: line-through; opacity: 0.55; }
+    .mt-sm { margin-top: var(--space-sm); }
+    .mt-md { margin-top: var(--space-md); }
+    .flex-row { display: flex; gap: var(--space-sm); align-items: center; }
 
-      /* Fade-in animation for cards */
-      @keyframes fadeUp {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      .fade-up {
-        animation: fadeUp 0.22s ease both;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- DIAGNOSTICS & DEBUGGER OVERLAY -->
-    <div id="diagnostics-panel" class="hidden">
-      <div class="diagnostics-header">
-        <span>SYSTEM MONITOR & LOGS</span>
-        <div style="display: flex; gap: 8px">
-          <button
-            onclick="copyDiagnosticsLog()"
-            style="
-              background: #444;
-              color: #fff;
-              border: none;
-              padding: 2px 6px;
-              cursor: pointer;
-              font-size: 9px;
-              border-radius: 2px;
-            ">
-            Copy
-          </button>
-          <button
-            onclick="toggleDiagnostics()"
-            style="
-              background: #c8402a;
-              color: #fff;
-              border: none;
-              padding: 2px 6px;
-              cursor: pointer;
-              font-size: 9px;
-              border-radius: 2px;
-            ">
-            Close
-          </button>
-        </div>
-      </div>
-      <div class="diagnostics-body" id="diagnostics-body"></div>
+    /* Fade-in animation for cards */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.22s ease both; }
+  </style>
+</head>
+<body>
+
+<!-- DIAGNOSTICS & DEBUGGER OVERLAY -->
+<div id="diagnostics-panel" class="hidden">
+  <div class="diagnostics-header">
+    <span>SYSTEM MONITOR & LOGS</span>
+    <div style="display:flex; gap: 8px;">
+      <button onclick="copyDiagnosticsLog()" style="background:#444; color:#fff; border:none; padding: 2px 6px; cursor:pointer; font-size:9px; border-radius:2px;">Copy</button>
+      <button onclick="toggleDiagnostics()" style="background:#c8402a; color:#fff; border:none; padding: 2px 6px; cursor:pointer; font-size:9px; border-radius:2px;">Close</button>
     </div>
+  </div>
+  <div class="diagnostics-body" id="diagnostics-body"></div>
+</div>
 
-    <!-- ============================================================
+<!-- ============================================================
      APP GRID — 3×3 layout (desktop)
      ============================================================ -->
-    <div id="app-grid">
-      <!-- ===== FUNCTIONAL BLOCK (top-left + top-center + mid-left + mid-center) ===== -->
-      <div id="functional-block">
-        <!-- TAB BAR -->
-        <nav id="tab-bar" role="tablist">
-          <button class="tab-button active" data-tab="today" role="tab">
-            Today
-          </button>
-          <button class="tab-button" data-tab="manage" role="tab">
-            Manage
-          </button>
-          <button
-            class="tab-button"
-            data-tab="music"
-            role="tab"
-            id="music-tab-btn">
-            Music
-          </button>
-          <button class="tab-button" data-tab="settings" role="tab">
-            Settings
-          </button>
-        </nav>
+<div id="app-grid">
 
-        <!-- MAIN PANEL -->
-        <main id="main-panel">
-          <!-- ====================================================
+  <!-- ===== FUNCTIONAL BLOCK (top-left + top-center + mid-left + mid-center) ===== -->
+  <div id="functional-block">
+
+    <!-- TAB BAR -->
+    <nav id="tab-bar" role="tablist">
+      <button class="tab-button active" data-tab="today"  role="tab">Today</button>
+      <button class="tab-button"        data-tab="manage" role="tab">Manage</button>
+      <button class="tab-button"        data-tab="music"  role="tab" id="music-tab-btn">Music</button>
+      <button class="tab-button"        data-tab="settings" role="tab">Settings</button>
+    </nav>
+
+    <!-- MAIN PANEL -->
+    <main id="main-panel">
+
+      <!-- ====================================================
            TAB 1 — TODAY'S TASKS
            ==================================================== -->
-          <div id="tab-today" class="tab-content active" role="tabpanel">
-            <!-- SCOREBOARD WIDGET — Neubrutalist score and active streak tracker -->
-            <div
-              id="scoreboard-widget"
-              class="task-card"
-              style="
-                background: var(--color-surface-dim);
-                border: var(--border);
-                box-shadow: var(--shadow-card);
-                margin-bottom: var(--space-md);
-                padding: var(--space-sm) var(--space-md);
-              ">
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  flex-wrap: wrap;
-                  gap: var(--space-sm);
-                ">
-                <div>
-                  <div
-                    style="
-                      font-family: var(--font-mono);
-                      font-size: 10px;
-                      text-transform: uppercase;
-                      letter-spacing: 1px;
-                      color: var(--color-ink-muted);
-                    ">
-                    Total Score
-                  </div>
-                  <div
-                    id="score-display"
-                    style="
-                      font-family: var(--font-display);
-                      font-size: 1.8rem;
-                      font-weight: 900;
-                      color: var(--color-accent);
-                    ">
-                    0000
-                  </div>
-                </div>
-                <div style="text-align: right">
-                  <div
-                    style="
-                      font-family: var(--font-mono);
-                      font-size: 10px;
-                      text-transform: uppercase;
-                      letter-spacing: 1px;
-                      color: var(--color-ink-muted);
-                    ">
-                    Active Streak (Max 7 Days)
-                  </div>
-                  <div
-                    style="
-                      display: flex;
-                      align-items: center;
-                      justify-content: flex-end;
-                      gap: 4px;
-                      margin-top: 4px;
-                    ">
-                    <div
-                      id="streak-stars"
-                      style="
-                        font-size: 1.25rem;
-                        line-height: 1;
-                        font-weight: 700;
-                      "></div>
-                    <div
-                      id="streak-multiplier"
-                      style="
-                        font-family: var(--font-mono);
-                        font-size: 11px;
-                        font-weight: 700;
-                        background: var(--color-ink);
-                        color: var(--color-surface);
-                        padding: 2px 6px;
-                        border-radius: var(--radius-sm);
-                        margin-left: var(--space-sm);
-                      ">
-                      1.0x
-                    </div>
-                  </div>
-                </div>
-              </div>
+      <div id="tab-today" class="tab-content active" role="tabpanel">
+        
+        <!-- SCOREBOARD WIDGET — Neubrutalist score and active streak tracker -->
+        <div id="scoreboard-widget" class="task-card" style="background: var(--color-surface-dim); border: var(--border); box-shadow: var(--shadow-card); margin-bottom: var(--space-md); padding: var(--space-sm) var(--space-md);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm);">
+            <div>
+              <div style="font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--color-ink-muted);">Total Score</div>
+              <div id="score-display" style="font-family: var(--font-display); font-size: 1.8rem; font-weight: 900; color: var(--color-accent);">0000</div>
             </div>
-
-            <button class="btn btn-primary btn-full" id="add-task-today-btn">
-              + Add Task
-            </button>
-            <div class="section-heading">Today's Tasks</div>
-            <div id="today-task-list"><!-- rendered by JS --></div>
-
-            <!-- Add Task Form Overlay (Today tab) -->
-            <div class="task-form-panel" id="today-form-panel">
-              <div class="section-heading">New Task</div>
-              <div class="form-row">
-                <label class="form-label" for="today-form-name"
-                  >Task Name</label
-                >
-                <input
-                  class="form-input"
-                  type="text"
-                  id="today-form-name"
-                  placeholder="What needs to be done?" />
-                <div
-                  id="today-form-error"
-                  class="text-muted"
-                  style="
-                    color: var(--color-accent);
-                    font-family: var(--font-mono);
-                    font-size: 11px;
-                    margin-top: 4px;
-                    display: none;
-                  "></div>
-              </div>
-              <div class="form-row">
-                <label class="form-checkbox-row">
-                  <input type="checkbox" id="today-form-important" />
-                  Mark as Important (red)
-                </label>
-              </div>
-              <div class="form-row">
-                <label class="form-checkbox-row">
-                  <input type="checkbox" id="today-form-recurring" checked />
-                  Recurring (appears in daily random pool)
-                </label>
-              </div>
-              <div class="form-row">
-                <label class="form-checkbox-row">
-                  <input type="checkbox" id="today-form-always" />
-                  Always Appear (never skipped)
-                </label>
-              </div>
-              <div class="form-row">
-                <span class="form-label"
-                  >Scheduled Days (leave blank for any day)</span
-                >
-                <div class="days-grid" id="today-form-days-grid"></div>
-              </div>
-              <div class="form-actions">
-                <button class="btn btn-primary" id="today-form-save-btn">
-                  Save Task
-                </button>
-                <button class="btn" id="today-form-back-btn">Cancel</button>
+            <div style="text-align: right;">
+              <div style="font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--color-ink-muted);">Active Streak (Max 7 Days)</div>
+              <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px;">
+                <div id="streak-stars" style="font-size: 1.25rem; line-height: 1; font-weight: 700;"></div>
+                <div id="streak-multiplier" style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: var(--color-ink); color: var(--color-surface); padding: 2px 6px; border-radius: var(--radius-sm); margin-left: var(--space-sm);">1.0x</div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- ====================================================
+        <button class="btn btn-primary btn-full" id="add-task-today-btn">+ Add Task</button>
+        <div class="section-heading">Today's Tasks</div>
+        <div id="today-task-list"><!-- rendered by JS --></div>
+
+        <!-- Add Task Form Overlay (Today tab) -->
+        <div class="task-form-panel" id="today-form-panel">
+          <div class="section-heading">New Task</div>
+          <div class="form-row">
+            <label class="form-label" for="today-form-name">Task Name</label>
+            <input class="form-input" type="text" id="today-form-name" placeholder="What needs to be done?" />
+            <div id="today-form-error" class="text-muted" style="color:var(--color-accent); font-family:var(--font-mono); font-size:11px; margin-top:4px; display:none;"></div>
+          </div>
+          <div class="form-row">
+            <label class="form-checkbox-row">
+              <input type="checkbox" id="today-form-important" />
+              Mark as Important (red)
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="form-checkbox-row">
+              <input type="checkbox" id="today-form-recurring" checked />
+              Recurring (appears in daily random pool)
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="form-checkbox-row">
+              <input type="checkbox" id="today-form-always" />
+              Always Appear (never skipped)
+            </label>
+          </div>
+          <div class="form-row">
+            <span class="form-label">Scheduled Days (leave blank for any day)</span>
+            <div class="days-grid" id="today-form-days-grid"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="today-form-save-btn">Save Task</button>
+            <button class="btn" id="today-form-back-btn">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
            TAB 2 — MANAGE TASKS
            ==================================================== -->
-          <div id="tab-manage" class="tab-content" role="tabpanel">
-            <button class="btn btn-primary btn-full" id="add-task-manage-btn">
-              + Add Task
-            </button>
-            <div class="section-heading">All Tasks</div>
-            <div id="manage-task-list"><!-- rendered by JS --></div>
+      <div id="tab-manage" class="tab-content" role="tabpanel">
+        <button class="btn btn-primary btn-full" id="add-task-manage-btn">+ Add Task</button>
+        <div class="section-heading">All Tasks</div>
+        <div id="manage-task-list"><!-- rendered by JS --></div>
 
-            <!-- Add Task Form Overlay (Manage tab) -->
-            <div class="task-form-panel" id="manage-form-panel">
-              <div class="section-heading">New Task</div>
-              <div class="form-row">
-                <label class="form-label" for="manage-form-name"
-                  >Task Name</label
-                >
-                <input
-                  class="form-input"
-                  type="text"
-                  id="manage-form-name"
-                  placeholder="What needs to be done?" />
-                <div
-                  id="manage-form-error"
-                  class="text-muted"
-                  style="
-                    color: var(--color-accent);
-                    font-family: var(--font-mono);
-                    font-size: 11px;
-                    margin-top: 4px;
-                    display: none;
-                  "></div>
-              </div>
-              <div class="form-row">
-                <label class="form-checkbox-row">
-                  <input type="checkbox" id="manage-form-important" />
-                  Mark as Important (red)
-                </label>
-              </div>
-              <div class="form-row">
-                <label class="form-checkbox-row">
-                  <input type="checkbox" id="manage-form-recurring" checked />
-                  Recurring (appears in daily random pool)
-                </label>
-              </div>
-              <div class="form-row">
-                <label class="form-checkbox-row">
-                  <input type="checkbox" id="manage-form-always" />
-                  Always Appear (never skipped)
-                </label>
-              </div>
-              <div class="form-row">
-                <span class="form-label"
-                  >Scheduled Days (leave blank for any day)</span
-                >
-                <div class="days-grid" id="manage-form-days-grid"></div>
-              </div>
-              <div class="form-actions">
-                <button class="btn btn-primary" id="manage-form-save-btn">
-                  Save Task
-                </button>
-                <button class="btn" id="manage-form-back-btn">Cancel</button>
-              </div>
-            </div>
+        <!-- Add Task Form Overlay (Manage tab) -->
+        <div class="task-form-panel" id="manage-form-panel">
+          <div class="section-heading">New Task</div>
+          <div class="form-row">
+            <label class="form-label" for="manage-form-name">Task Name</label>
+            <input class="form-input" type="text" id="manage-form-name" placeholder="What needs to be done?" />
+            <div id="manage-form-error" class="text-muted" style="color:var(--color-accent); font-family:var(--font-mono); font-size:11px; margin-top:4px; display:none;"></div>
           </div>
+          <div class="form-row">
+            <label class="form-checkbox-row">
+              <input type="checkbox" id="manage-form-important" />
+              Mark as Important (red)
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="form-checkbox-row">
+              <input type="checkbox" id="manage-form-recurring" checked />
+              Recurring (appears in daily random pool)
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="form-checkbox-row">
+              <input type="checkbox" id="manage-form-always" />
+              Always Appear (never skipped)
+            </label>
+          </div>
+          <div class="form-row">
+            <span class="form-label">Scheduled Days (leave blank for any day)</span>
+            <div class="days-grid" id="manage-form-days-grid"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="manage-form-save-btn">Save Task</button>
+            <button class="btn" id="manage-form-back-btn">Cancel</button>
+          </div>
+        </div>
+      </div>
 
-          <!-- ====================================================
+      <!-- ====================================================
            TAB 3 — MUSIC PLAYER
            ==================================================== -->
-          <div id="tab-music" class="tab-content" role="tabpanel">
-            <div id="music-player">
-              <!-- <div id="music-disc"><div id="music-disc-center"></div></div> -->
-              <div>
-                <div id="music-track-title">No track loaded</div>
-                <div
-                  id="music-track-index"
-                  style="text-align: center; margin-top: 4px"></div>
-              </div>
-              <div class="music-controls">
-                <button class="btn" id="music-prev-btn">&#9664;&#9664;</button>
-                <button class="btn btn-primary" id="music-play-btn">
-                  &#9654; Play
-                </button>
-                <button class="btn" id="music-next-btn">&#9654;&#9654;</button>
-              </div>
-            </div>
+      <div id="tab-music" class="tab-content" role="tabpanel">
+        <div id="music-player">
+          <!-- <div id="music-disc"><div id="music-disc-center"></div></div> -->
+          <div>
+            <div id="music-track-title">No track loaded</div>
+            <div id="music-track-index" style="text-align:center; margin-top:4px;"></div>
           </div>
+          <div class="music-controls">
+            <button class="btn" id="music-prev-btn">&#9664;&#9664;</button>
+            <button class="btn btn-primary" id="music-play-btn">&#9654; Play</button>
+            <button class="btn" id="music-next-btn">&#9654;&#9654;</button>
+          </div>
+        </div>
+      </div>
 
-          <!-- ====================================================
+      <!-- ====================================================
            TAB 4 — SETTINGS
            ==================================================== -->
-          <div id="tab-settings" class="tab-content" role="tabpanel">
-            <div class="section-heading">Preferences</div>
+      <div id="tab-settings" class="tab-content" role="tabpanel">
+        <div class="section-heading">Preferences</div>
 
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Enable Score System</div>
-                <div class="settings-desc">
-                  Show scoreboard and track game progress
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                id="setting-score"
-                checked
-                style="
-                  width: 20px;
-                  height: 20px;
-                  accent-color: var(--color-ink);
-                  cursor: pointer;
-                " />
-            </div>
-
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Enable Music</div>
-                <div class="settings-desc">
-                  Show Music tab and allow playback
-                </div>
-              </div>
-              <!-- Replaced custom slider with a clean checkbox -->
-              <input
-                type="checkbox"
-                id="setting-music"
-                checked
-                style="
-                  width: 20px;
-                  height: 20px;
-                  accent-color: var(--color-ink);
-                  cursor: pointer;
-                " />
-            </div>
-
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Enable Sound Effects</div>
-                <div class="settings-desc">Play SFX on task actions</div>
-              </div>
-              <!-- Replaced custom slider with a clean checkbox -->
-              <input
-                type="checkbox"
-                id="setting-sfx"
-                checked
-                style="
-                  width: 20px;
-                  height: 20px;
-                  accent-color: var(--color-ink);
-                  cursor: pointer;
-                " />
-            </div>
-
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Simplified UI</div>
-                <div class="settings-desc">
-                  Expand to full viewport, remove grid constraints
-                </div>
-              </div>
-              <!-- Replaced custom slider with a clean checkbox -->
-              <input
-                type="checkbox"
-                id="setting-simplified"
-                style="
-                  width: 20px;
-                  height: 20px;
-                  accent-color: var(--color-ink);
-                  cursor: pointer;
-                " />
-            </div>
-
-            <!-- Daily Random Tasks Selection Range Limit -->
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Daily Random Tasks Limit</div>
-                <div class="settings-desc">
-                  Set number of random tasks selected daily
-                </div>
-              </div>
-              <input
-                type="number"
-                id="setting-random-limit"
-                min="1"
-                max="50"
-                style="
-                  width: 60px;
-                  padding: 4px;
-                  border: var(--border);
-                  background: var(--color-surface);
-                  color: var(--color-ink);
-                  font-family: var(--font-mono);
-                  font-size: 13px;
-                  text-align: center;
-                  border-radius: var(--radius-sm);
-                " />
-            </div>
-
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Reset Today's Tasks</div>
-                <div class="settings-desc">
-                  Re-roll today's random task selection
-                </div>
-              </div>
-              <button class="btn btn-warn" id="reset-today-btn">Reset</button>
-            </div>
-
-            <div class="settings-row">
-              <div>
-                <div class="settings-label">Created By</div>
-                <!-- <div class="settings-desc">
-                  Show on-screen debugging system console
-                </div> -->
-              </div>
-              <!-- <button class="btn" onclick="toggleDiagnostics()">
-                Open Logs
-              </button> -->
-              <div class="settings-row">Ethan Carson, 2026</div>
-            </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Enable Score System</div>
+            <div class="settings-desc">Show scoreboard and track game progress</div>
           </div>
-        </main>
-        <!-- /#main-panel -->
-      </div>
-      <!-- /#functional-block -->
-    </div>
-    <!-- /#app-grid -->
+          <input type="checkbox" id="setting-score" checked style="width: 20px; height: 20px; accent-color: var(--color-ink); cursor: pointer;" />
+        </div>
 
-    <!-- ============================================================
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Enable Music</div>
+            <div class="settings-desc">Show Music tab and allow playback</div>
+          </div>
+          <!-- Replaced custom slider with a clean checkbox -->
+          <input type="checkbox" id="setting-music" checked style="width: 20px; height: 20px; accent-color: var(--color-ink); cursor: pointer;" />
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Enable Sound Effects</div>
+            <div class="settings-desc">Play SFX on task actions</div>
+          </div>
+          <!-- Replaced custom slider with a clean checkbox -->
+          <input type="checkbox" id="setting-sfx" checked style="width: 20px; height: 20px; accent-color: var(--color-ink); cursor: pointer;" />
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Simplified UI</div>
+            <div class="settings-desc">Expand to full viewport, remove grid constraints</div>
+          </div>
+          <!-- Replaced custom slider with a clean checkbox -->
+          <input type="checkbox" id="setting-simplified" style="width: 20px; height: 20px; accent-color: var(--color-ink); cursor: pointer;" />
+        </div>
+
+        <!-- Daily Random Tasks Selection Range Limit -->
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Daily Random Tasks Limit</div>
+            <div class="settings-desc">Set number of random tasks selected daily</div>
+          </div>
+          <input type="number" id="setting-random-limit" min="1" max="50" style="width: 60px; padding: 4px; border: var(--border); background: var(--color-surface); color: var(--color-ink); font-family: var(--font-mono); font-size: 13px; text-align: center; border-radius: var(--radius-sm);" />
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Reset Today's Tasks</div>
+            <div class="settings-desc">Re-roll today's random task selection</div>
+          </div>
+          <button class="btn btn-warn" id="reset-today-btn">Reset</button>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Diagnostics & Monitoring</div>
+            <div class="settings-desc">Show on-screen debugging system console</div>
+          </div>
+          <button class="btn" onclick="toggleDiagnostics()">Open Logs</button>
+        </div>
+      </div>
+
+    </main><!-- /#main-panel -->
+
+  </div><!-- /#functional-block -->
+
+
+</div><!-- /#app-grid -->
+
+<!-- ============================================================
      CUSTOM INTERACTIVE MODAL COMPONENT (Replaces alert & confirm)
      ============================================================ -->
-    <div class="custom-modal-overlay" id="custom-modal">
-      <div class="custom-modal-box">
-        <div class="custom-modal-title" id="custom-modal-title">
-          System Request
-        </div>
-        <div class="custom-modal-message" id="custom-modal-message">
-          Do you want to proceed?
-        </div>
-        <div class="custom-modal-actions" id="custom-modal-actions">
-          <button class="btn" id="custom-modal-cancel">Cancel</button>
-          <button class="btn btn-primary" id="custom-modal-confirm">
-            Confirm
-          </button>
-        </div>
-      </div>
+<div class="custom-modal-overlay" id="custom-modal">
+  <div class="custom-modal-box">
+    <div class="custom-modal-title" id="custom-modal-title">System Request</div>
+    <div class="custom-modal-message" id="custom-modal-message">Do you want to proceed?</div>
+    <div class="custom-modal-actions" id="custom-modal-actions">
+      <button class="btn" id="custom-modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="custom-modal-confirm">Confirm</button>
     </div>
+  </div>
+</div>
 
-    <script>
-      // ============================================================
-      // SYSTEM DIAGNOSTICS & TELEMETRY MONITORING
-      // ============================================================
-      const logs = [];
-      function logDiagnostic(message, type = "info") {
-        const timestamp = new Date().toLocaleTimeString();
-        const rawLine = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
-        logs.push(rawLine);
+<script>
+// ============================================================
+// SYSTEM DIAGNOSTICS & TELEMETRY MONITORING
+// ============================================================
+const logs = [];
+function logDiagnostic(message, type = "info") {
+  const timestamp = new Date().toLocaleTimeString();
+  const rawLine = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+  logs.push(rawLine);
+  
+  const body = document.getElementById("diagnostics-body");
+  if (body) {
+    const lineSpan = document.createElement("div");
+    lineSpan.className = `diagnostics-log-line diag-${type}`;
+    lineSpan.textContent = rawLine;
+    body.appendChild(lineSpan);
+    body.scrollTop = body.scrollHeight;
+  }
+  console.log(rawLine);
+}
 
-        const body = document.getElementById("diagnostics-body");
-        if (body) {
-          const lineSpan = document.createElement("div");
-          lineSpan.className = `diagnostics-log-line diag-${type}`;
-          lineSpan.textContent = rawLine;
-          body.appendChild(lineSpan);
-          body.scrollTop = body.scrollHeight;
-        }
-        console.log(rawLine);
+// Global Exception Catcher
+window.onerror = function(message, source, lineno, colno, error) {
+  const errMsg = `${message} at ${source ? source.split('/').pop() : 'inline'}:${lineno}:${colno}`;
+  logDiagnostic(errMsg, "err");
+  // Show diagnostics pane automatically if a critical error occurs
+  const diagPanel = document.getElementById("diagnostics-panel");
+  if (diagPanel) diagPanel.classList.remove("hidden");
+  return false; // let browser log it as well
+};
+
+window.onunhandledrejection = function(event) {
+  logDiagnostic(`Unhandled Promise rejection: ${event.reason}`, "err");
+};
+
+function toggleDiagnostics() {
+  const panel = document.getElementById("diagnostics-panel");
+  if (panel) panel.classList.toggle("hidden");
+  playSoundEffect("settingAction");
+}
+
+function copyDiagnosticsLog() {
+  const textToCopy = logs.join("\n");
+  const tempTextArea = document.createElement("textarea");
+  tempTextArea.value = textToCopy;
+  document.body.appendChild(tempTextArea);
+  tempTextArea.select();
+  document.execCommand('copy');
+  document.body.removeChild(tempTextArea);
+  logDiagnostic("Diagnostics log copied to clipboard!", "info");
+}
+
+// Safe wrapper for DOM textContent edits to block crashes on null pointers
+function safeSetText(elementId, value) {
+  const el = document.getElementById(elementId);
+  if (el) {
+    el.textContent = value;
+  } else {
+    logDiagnostic(`Attempted to set text on missing element ID: "${elementId}"`, "warn");
+  }
+}
+
+// ============================================================
+// CUSTOM DIALOG & MODAL LOGIC
+// ============================================================
+// UNUSED VARIABLE - REPLACED BY LOCAL RESOLVES
+// let activeModalResolve = null;
+
+function showConfirmDialog(title, message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("custom-modal");
+    const mTitle = document.getElementById("custom-modal-title");
+    const mMessage = document.getElementById("custom-modal-message");
+    const btnCancel = document.getElementById("custom-modal-cancel");
+    const btnConfirm = document.getElementById("custom-modal-confirm");
+
+    if (!modal || !mTitle || !mMessage) {
+      logDiagnostic("Modal Elements Missing. Defaulting confirm to true.", "warn");
+      resolve(true);
+      return;
+    }
+
+    mTitle.textContent = title.toUpperCase();
+    mMessage.textContent = message;
+    btnCancel.classList.remove("hidden"); // Ensure Cancel button is visible
+    modal.classList.add("active");
+
+    // Reset old listeners by rewriting clone
+    const newConfirm = btnConfirm.cloneNode(true);
+    const newCancel = btnCancel.cloneNode(true);
+    btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
+    btnCancel.parentNode.replaceChild(newCancel, btnCancel);
+
+    newConfirm.addEventListener("click", () => {
+      modal.classList.remove("active");
+      resolve(true);
+    });
+
+    newCancel.addEventListener("click", () => {
+      modal.classList.remove("active");
+      resolve(false);
+    });
+  });
+}
+
+function showAlertDialog(title, message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("custom-modal");
+    const mTitle = document.getElementById("custom-modal-title");
+    const mMessage = document.getElementById("custom-modal-message");
+    const btnCancel = document.getElementById("custom-modal-cancel");
+    const btnConfirm = document.getElementById("custom-modal-confirm");
+
+    if (!modal || !mTitle || !mMessage) {
+      logDiagnostic(`Fallback alert: [${title}] ${message}`, "info");
+      resolve();
+      return;
+    }
+
+    mTitle.textContent = title.toUpperCase();
+    mMessage.textContent = message;
+    btnCancel.classList.add("hidden"); // Hide cancel button for warning/alerts
+    modal.classList.add("active");
+
+    const newConfirm = btnConfirm.cloneNode(true);
+    btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
+
+    newConfirm.addEventListener("click", () => {
+      modal.classList.remove("active");
+      resolve();
+    });
+  });
+}
+
+// ============================================================
+// MEDIA CONFIG — Edit all audio and music links here
+// Variables are mapped precisely so you can paste your own URLs over them!
+// ============================================================
+const SOUND_EFFECTS = {
+  // --- TASK ACTIONS ---
+  taskStart:       "https://cdn.pixabay.com/download/audio/2022/03/10/audio_1ba8ab1e5b.mp3", // (Soft pop) Starting a task
+  taskComplete:    "https://cdn.pixabay.com/download/audio/2022/01/18/audio_0e4c1ba3ab.mp3", // (Success chime) Finishing a task
+  taskRemove:      "https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3", // (Generic click) Removing/Deleting a task
+  
+  // --- FORM ACTIONS (Add Task Screen) ---
+  formSave:        "https://cdn.pixabay.com/download/audio/2022/01/18/audio_0e4c1ba3ab.mp3", // (Success chime) Pressing Save Task
+  formCancel:      "https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3", // (Generic click) Pressing Cancel Task
+  
+  // --- SETTINGS ACTIONS ---
+  settingToggle:   "https://cdn.pixabay.com/download/audio/2022/03/15/audio_5e13bb95f2.mp3", // (Switch sound) Flipping a toggle switch
+  settingAction:   "https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3", // (Generic click) Clicking Reset or Logs
+  
+  // --- GENERAL NAVIGATION ---
+  menuClick:       "https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3", // Tab switching, miscellaneous standard clicks
+};
+
+const MUSIC_TRACKS = [
+  { title: "Lofi Study Chill",       url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3" },
+  { title: "Peaceful Piano Morning", url: "https://cdn.pixabay.com/download/audio/2022/01/20/audio_d0c6ff1bab.mp3" },
+  { title: "Focus Flow",             url: "https://cdn.pixabay.com/download/audio/2023/02/28/audio_2c904d1d41.mp3" },
+];
+
+// ============================================================
+// CONSTANTS & GLOBAL STATE
+// ============================================================
+
+const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const TODAY_DAY_NAME = DAY_NAMES[new Date().getDay()];
+const TODAY_DATE_KEY = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+// UNUSED CONSTANT - REPLACED BY USER CONFIGURABLE VARIABLE (maxRandomTasks)
+// const MAX_RANDOM_TASKS = 5; // how many random recurring tasks to select per day
+
+// ============================================================
+// SETTINGS STATE (loaded from localStorage / configured by user)
+// ============================================================
+let soundEffectsEnabled = true;
+let musicEnabled        = true;
+let simplifiedUI        = false;
+let maxRandomTasks      = 5;      // user-configured daily random task selection limit
+let scoreSystemEnabled  = true;   // user-configured flag to toggle score visibility
+
+// ============================================================
+// PERSISTED SCORE & STREAK STATE
+// ============================================================
+let scoreState = {
+  score: 0,
+  streak: 0,
+  lastActiveDate: "",            // YYYY-MM-DD of last activity
+  allTasksBonusClaimedDate: ""   // YYYY-MM-DD to protect from double claiming cleared day reward
+};
+
+// ============================================================
+// TASK DATA (persisted to localStorage)
+// ============================================================
+let allTasks = [];       // master task list
+let todayTaskIds = [];   // IDs of tasks shown today
+
+// ============================================================
+// MUSIC PLAYER STATE
+// ============================================================
+let currentSongIndex = 0;
+let musicAudioElement = new Audio();
+let isMusicPlaying = false;
+
+// ============================================================
+// SECTION: PERSISTENCE — load/save to localStorage
+// ============================================================
+
+function loadDataFromStorage() {
+  logDiagnostic("Loading state from localStorage...", "info");
+  try {
+    const storedTasks = localStorage.getItem("dailydo_allTasks");
+    if (storedTasks) allTasks = JSON.parse(storedTasks);
+  } catch (error) { 
+    logDiagnostic("Failed to parse master tasks storage, resetting.", "warn");
+    allTasks = []; 
+  }
+
+  try {
+    const storedSettings = localStorage.getItem("dailydo_settings");
+    if (storedSettings) {
+      const parsed = JSON.parse(storedSettings);
+      soundEffectsEnabled = parsed.soundEffectsEnabled ?? true;
+      musicEnabled        = parsed.musicEnabled        ?? true;
+      simplifiedUI        = parsed.simplifiedUI        ?? false;
+      maxRandomTasks      = parsed.maxRandomTasks      ?? 5;
+      scoreSystemEnabled  = parsed.scoreSystemEnabled  ?? true;
+    }
+  } catch (error) { /* use defaults */ }
+
+  // Load Score & Streak Data
+  try {
+    const storedScore = localStorage.getItem("dailydo_scoreState");
+    if (storedScore) {
+      scoreState = JSON.parse(storedScore);
+    } else {
+      scoreState = { score: 0, streak: 0, lastActiveDate: "", allTasksBonusClaimedDate: "" };
+    }
+  } catch (error) {
+    scoreState = { score: 0, streak: 0, lastActiveDate: "", allTasksBonusClaimedDate: "" };
+  }
+
+  try {
+    const storedToday = localStorage.getItem("dailydo_today");
+    if (storedToday) {
+      const parsed = JSON.parse(storedToday);
+      if (parsed.dateKey === TODAY_DATE_KEY) {
+        todayTaskIds = parsed.taskIds;
+      } else {
+        logDiagnostic("New calendar day detected. Resetting selected today tasks", "info");
+        todayTaskIds = []; // new day — re-roll
       }
+    }
+  } catch (error) { todayTaskIds = []; }
+}
 
-      // Global Exception Catcher
-      window.onerror = function (message, source, lineno, colno, error) {
-        const errMsg = `${message} at ${source ? source.split("/").pop() : "inline"}:${lineno}:${colno}`;
-        logDiagnostic(errMsg, "err");
-        // Show diagnostics pane automatically if a critical error occurs
-        const diagPanel = document.getElementById("diagnostics-panel");
-        if (diagPanel) diagPanel.classList.remove("hidden");
-        return false; // let browser log it as well
-      };
+function saveAllTasksToStorage() {
+  localStorage.setItem("dailydo_allTasks", JSON.stringify(allTasks));
+}
 
-      window.onunhandledrejection = function (event) {
-        logDiagnostic(`Unhandled Promise rejection: ${event.reason}`, "err");
-      };
+function saveTodayTasksToStorage() {
+  localStorage.setItem("dailydo_today", JSON.stringify({
+    dateKey: TODAY_DATE_KEY,
+    taskIds: todayTaskIds,
+  }));
+}
 
-      function toggleDiagnostics() {
-        const panel = document.getElementById("diagnostics-panel");
-        if (panel) panel.classList.toggle("hidden");
-        playSoundEffect("settingAction");
+function saveSettingsToStorage() {
+  localStorage.setItem("dailydo_settings", JSON.stringify({
+    soundEffectsEnabled,
+    musicEnabled,
+    simplifiedUI,
+    maxRandomTasks,
+    scoreSystemEnabled,
+  }));
+}
+
+// Save Score & Streak data
+function saveScoreStateToStorage() {
+  localStorage.setItem("dailydo_scoreState", JSON.stringify(scoreState));
+}
+
+// ============================================================
+// SECTION: SCORE & STREAK UTILITIES & RENDERING
+// ============================================================
+
+// Calculates difference in days between two YYYY-MM-DD string dates safely
+function getDayDifference(newestDateStr, oldestDateStr) {
+  if (!newestDateStr || !oldestDateStr) return null;
+  const partsNew = newestDateStr.split("-");
+  const partsOld = oldestDateStr.split("-");
+  
+  // midday configurations avoid Daylight Savings errors during calculation
+  const dateNew = new Date(partsNew[0], partsNew[1] - 1, partsNew[2], 12, 0, 0);
+  const dateOld = new Date(partsOld[0], partsOld[1] - 1, partsOld[2], 12, 0, 0);
+  
+  const diffTime = dateNew - dateOld;
+  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+}
+
+// Tracks visits and handles streak increments/resets
+function checkAndProcessStreak() {
+  if (!scoreState.lastActiveDate) {
+    // Brand new user initialization
+    scoreState.streak = 1;
+    scoreState.lastActiveDate = TODAY_DATE_KEY;
+    saveScoreStateToStorage();
+    logDiagnostic("Welcome to your first streak day!", "info");
+    return;
+  }
+
+  const diff = getDayDifference(TODAY_DATE_KEY, scoreState.lastActiveDate);
+
+  if (diff === 1) {
+    // Consecutive day return! Maxes out at 1 week (7 days)
+    scoreState.streak = Math.min(scoreState.streak + 1, 7);
+    scoreState.lastActiveDate = TODAY_DATE_KEY;
+    
+    // Reward points instantly on daily retention
+    const returnBonus = scoreState.streak * 20;
+    scoreState.score += returnBonus;
+    saveScoreStateToStorage();
+    
+    logDiagnostic(`Daily Streak Active! Day: ${scoreState.streak}. Earned +${returnBonus} return bonus.`, "info");
+    
+    if (scoreSystemEnabled) {
+      setTimeout(() => {
+        showAlertDialog(
+          "Streak Active! ⚡", 
+          `Welcome back! You are on a consecutive ${scoreState.streak}-day streak! Gained +${returnBonus} points. Multiplier is now ${(1 + scoreState.streak * 0.1).toFixed(1)}x!`
+        );
+      }, 550);
+    }
+
+  } else if (diff > 1) {
+    // Missed a day: Streak is broken and resets to 1 (starting today)
+    logDiagnostic(`Streak broke. Gap was ${diff} days. Resetting back to Day 1.`, "warn");
+    scoreState.streak = 1;
+    scoreState.lastActiveDate = TODAY_DATE_KEY;
+    saveScoreStateToStorage();
+    
+    if (scoreSystemEnabled) {
+      setTimeout(() => {
+        showAlertDialog(
+          "Streak Broken 💔", 
+          "Ah! You missed a day. Your consecutive active tracker has reset to Day 1. Let's build a new streak starting today!"
+        );
+      }, 550);
+    }
+  }
+}
+
+// Renders scoreboard widget details cleanly
+function renderScoreboard() {
+  const scoreEl = document.getElementById("score-display");
+  const starsEl = document.getElementById("streak-stars");
+  const multEl  = document.getElementById("streak-multiplier");
+
+  if (scoreEl) {
+    // Retro padding
+    scoreEl.textContent = String(scoreState.score).padStart(4, '0');
+  }
+
+  if (starsEl) {
+    let starsHTML = "";
+    for (let i = 1; i <= 7; i++) {
+      if (i <= scoreState.streak) {
+        starsHTML += `<span style="color: var(--color-accent-warm); text-shadow: 1.5px 1.5px 0px var(--color-border); margin-right: 2px;">★</span>`;
+      } else {
+        starsHTML += `<span style="color: rgba(59,72,114,0.22); margin-right: 2px;">☆</span>`;
       }
+    }
+    starsEl.innerHTML = starsHTML;
+  }
 
-      function copyDiagnosticsLog() {
-        const textToCopy = logs.join("\n");
-        const tempTextArea = document.createElement("textarea");
-        tempTextArea.value = textToCopy;
-        document.body.appendChild(tempTextArea);
-        tempTextArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(tempTextArea);
-        logDiagnostic("Diagnostics log copied to clipboard!", "info");
-      }
+  if (multEl) {
+    const multiplier = 1 + (scoreState.streak * 0.1);
+    multEl.textContent = `${multiplier.toFixed(1)}x`;
+  }
+}
 
-      // Safe wrapper for DOM textContent edits to block crashes on null pointers
-      function safeSetText(elementId, value) {
-        const el = document.getElementById(elementId);
-        if (el) {
-          el.textContent = value;
-        } else {
-          logDiagnostic(
-            `Attempted to set text on missing element ID: "${elementId}"`,
-            "warn",
+// Check and award all completed tasks bonus
+function checkAndAwardAllTasksBonus() {
+  const todayTasks = getTodayTasks();
+  if (todayTasks.length > 0 && todayTasks.every(t => t.status === "complete")) {
+    // Verify bonus has not already been secured for today
+    if (scoreState.allTasksBonusClaimedDate !== TODAY_DATE_KEY) {
+      const baseBonus = 50;
+      const multiplier = 1 + (scoreState.streak * 0.1);
+      const finalBonus = Math.round(baseBonus * multiplier);
+
+      scoreState.score += finalBonus;
+      scoreState.allTasksBonusClaimedDate = TODAY_DATE_KEY;
+      saveScoreStateToStorage();
+      renderScoreboard();
+
+      logDiagnostic(`ALL TASKS COMPLETED! Awarded +${finalBonus} Daily Clear bonus!`, "info");
+      
+      if (scoreSystemEnabled) {
+        setTimeout(() => {
+          showAlertDialog(
+            "All Clear! 🎉", 
+            `Incredible job! You cleared all your tasks for today! Earned +${finalBonus} points (incorporating your ${multiplier.toFixed(1)}x streak multiplier).`
           );
-        }
+        }, 400);
       }
-
-      // ============================================================
-      // CUSTOM DIALOG & MODAL LOGIC
-      // ============================================================
-      // UNUSED VARIABLE - REPLACED BY LOCAL RESOLVES
-      // let activeModalResolve = null;
-
-      function showConfirmDialog(title, message) {
-        return new Promise((resolve) => {
-          const modal = document.getElementById("custom-modal");
-          const mTitle = document.getElementById("custom-modal-title");
-          const mMessage = document.getElementById("custom-modal-message");
-          const btnCancel = document.getElementById("custom-modal-cancel");
-          const btnConfirm = document.getElementById("custom-modal-confirm");
-
-          if (!modal || !mTitle || !mMessage) {
-            logDiagnostic(
-              "Modal Elements Missing. Defaulting confirm to true.",
-              "warn",
-            );
-            resolve(true);
-            return;
-          }
-
-          mTitle.textContent = title.toUpperCase();
-          mMessage.textContent = message;
-          btnCancel.classList.remove("hidden"); // Ensure Cancel button is visible
-          modal.classList.add("active");
-
-          // Reset old listeners by rewriting clone
-          const newConfirm = btnConfirm.cloneNode(true);
-          const newCancel = btnCancel.cloneNode(true);
-          btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
-          btnCancel.parentNode.replaceChild(newCancel, btnCancel);
-
-          newConfirm.addEventListener("click", () => {
-            modal.classList.remove("active");
-            resolve(true);
-          });
-
-          newCancel.addEventListener("click", () => {
-            modal.classList.remove("active");
-            resolve(false);
-          });
-        });
-      }
-
-      function showAlertDialog(title, message) {
-        return new Promise((resolve) => {
-          const modal = document.getElementById("custom-modal");
-          const mTitle = document.getElementById("custom-modal-title");
-          const mMessage = document.getElementById("custom-modal-message");
-          const btnCancel = document.getElementById("custom-modal-cancel");
-          const btnConfirm = document.getElementById("custom-modal-confirm");
-
-          if (!modal || !mTitle || !mMessage) {
-            logDiagnostic(`Fallback alert: [${title}] ${message}`, "info");
-            resolve();
-            return;
-          }
-
-          mTitle.textContent = title.toUpperCase();
-          mMessage.textContent = message;
-          btnCancel.classList.add("hidden"); // Hide cancel button for warning/alerts
-          modal.classList.add("active");
-
-          const newConfirm = btnConfirm.cloneNode(true);
-          btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
-
-          newConfirm.addEventListener("click", () => {
-            modal.classList.remove("active");
-            resolve();
-          });
-        });
-      }
-
-      // ============================================================
-      // MEDIA CONFIG — Edit all audio and music links here
-      // Variables are mapped precisely so you can paste your own URLs over them!
-      // ============================================================
-      const SOUND_EFFECTS = {
-        // --- TASK ACTIONS ---
-        taskStart: "beep.mp3", // (Soft pop) Starting a task
-        taskComplete: "sucess.mp3", // (Success chime) Finishing a task
-        taskRemove: "beep.mp3", // (Generic click) Removing/Deleting a task
-
-        // --- FORM ACTIONS (Add Task Screen) ---
-        formSave: "sucess.mp3", // (Success chime) Pressing Save Task
-        formCancel: "beep.mp3", // (Generic click) Pressing Cancel Task
-
-        // --- SETTINGS ACTIONS ---
-        settingToggle: "click.mp3", // (Switch sound) Flipping a toggle switch
-        settingAction: "beep.mp3", // (Generic click) Clicking Reset or Logs
-
-        // --- GENERAL NAVIGATION ---
-        menuClick: "click.mp3", // Tab switching, miscellaneous standard clicks
-      };
-
-      const MUSIC_TRACKS = [
-        {
-          title: "Lofi Study Chill",
-          url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3",
-        },
-        {
-          title: "Space",
-          url: "space.mp3",
-        },
-        {
-          title: "Night Routine",
-          url: "night.mp3",
-        },
-      ];
-
-      // ============================================================
-      // CONSTANTS & GLOBAL STATE
-      // ============================================================
-
-      const DAY_NAMES = [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ];
-      const TODAY_DAY_NAME = DAY_NAMES[new Date().getDay()];
-      const TODAY_DATE_KEY = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-
-      // UNUSED CONSTANT - REPLACED BY USER CONFIGURABLE VARIABLE (maxRandomTasks)
-      // const MAX_RANDOM_TASKS = 5; // how many random recurring tasks to select per day
-
-      // ============================================================
-      // SETTINGS STATE (loaded from localStorage / configured by user)
-      // ============================================================
-      let soundEffectsEnabled = true;
-      let musicEnabled = true;
-      let simplifiedUI = false;
-      let maxRandomTasks = 5; // user-configured daily random task selection limit
-      let scoreSystemEnabled = true; // user-configured flag to toggle score visibility
-
-      // ============================================================
-      // PERSISTED SCORE & STREAK STATE
-      // ============================================================
-      let scoreState = {
-        score: 0,
-        streak: 0,
-        lastActiveDate: "", // YYYY-MM-DD of last activity
-        allTasksBonusClaimedDate: "", // YYYY-MM-DD to protect from double claiming cleared day reward
-      };
-
-      // ============================================================
-      // TASK DATA (persisted to localStorage)
-      // ============================================================
-      let allTasks = []; // master task list
-      let todayTaskIds = []; // IDs of tasks shown today
-
-      // ============================================================
-      // MUSIC PLAYER STATE
-      // ============================================================
-      let currentSongIndex = 0;
-      let musicAudioElement = new Audio();
-      let isMusicPlaying = false;
-
-      // ============================================================
-      // SECTION: PERSISTENCE — load/save to localStorage
-      // ============================================================
-
-      function loadDataFromStorage() {
-        logDiagnostic("Loading state from localStorage...", "info");
-        try {
-          const storedTasks = localStorage.getItem("dailydo_allTasks");
-          if (storedTasks) allTasks = JSON.parse(storedTasks);
-        } catch (error) {
-          logDiagnostic(
-            "Failed to parse master tasks storage, resetting.",
-            "warn",
-          );
-          allTasks = [];
-        }
-
-        try {
-          const storedSettings = localStorage.getItem("dailydo_settings");
-          if (storedSettings) {
-            const parsed = JSON.parse(storedSettings);
-            soundEffectsEnabled = parsed.soundEffectsEnabled ?? true;
-            musicEnabled = parsed.musicEnabled ?? true;
-            simplifiedUI = parsed.simplifiedUI ?? false;
-            maxRandomTasks = parsed.maxRandomTasks ?? 5;
-            scoreSystemEnabled = parsed.scoreSystemEnabled ?? true;
-          }
-        } catch (error) {
-          /* use defaults */
-        }
-
-        // Load Score & Streak Data
-        try {
-          const storedScore = localStorage.getItem("dailydo_scoreState");
-          if (storedScore) {
-            scoreState = JSON.parse(storedScore);
-          } else {
-            scoreState = {
-              score: 0,
-              streak: 0,
-              lastActiveDate: "",
-              allTasksBonusClaimedDate: "",
-            };
-          }
-        } catch (error) {
-          scoreState = {
-            score: 0,
-            streak: 0,
-            lastActiveDate: "",
-            allTasksBonusClaimedDate: "",
-          };
-        }
-
-        try {
-          const storedToday = localStorage.getItem("dailydo_today");
-          if (storedToday) {
-            const parsed = JSON.parse(storedToday);
-            if (parsed.dateKey === TODAY_DATE_KEY) {
-              todayTaskIds = parsed.taskIds;
-            } else {
-              logDiagnostic(
-                "New calendar day detected. Resetting selected today tasks",
-                "info",
-              );
-              todayTaskIds = []; // new day — re-roll
-            }
-          }
-        } catch (error) {
-          todayTaskIds = [];
-        }
-      }
-
-      function saveAllTasksToStorage() {
-        localStorage.setItem("dailydo_allTasks", JSON.stringify(allTasks));
-      }
-
-      function saveTodayTasksToStorage() {
-        localStorage.setItem(
-          "dailydo_today",
-          JSON.stringify({
-            dateKey: TODAY_DATE_KEY,
-            taskIds: todayTaskIds,
-          }),
-        );
-      }
-
-      function saveSettingsToStorage() {
-        localStorage.setItem(
-          "dailydo_settings",
-          JSON.stringify({
-            soundEffectsEnabled,
-            musicEnabled,
-            simplifiedUI,
-            maxRandomTasks,
-            scoreSystemEnabled,
-          }),
-        );
-      }
-
-      // Save Score & Streak data
-      function saveScoreStateToStorage() {
-        localStorage.setItem("dailydo_scoreState", JSON.stringify(scoreState));
-      }
-
-      // ============================================================
-      // SECTION: SCORE & STREAK UTILITIES & RENDERING
-      // ============================================================
-
-      // Calculates difference in days between two YYYY-MM-DD string dates safely
-      function getDayDifference(newestDateStr, oldestDateStr) {
-        if (!newestDateStr || !oldestDateStr) return null;
-        const partsNew = newestDateStr.split("-");
-        const partsOld = oldestDateStr.split("-");
-
-        // midday configurations avoid Daylight Savings errors during calculation
-        const dateNew = new Date(
-          partsNew[0],
-          partsNew[1] - 1,
-          partsNew[2],
-          12,
-          0,
-          0,
-        );
-        const dateOld = new Date(
-          partsOld[0],
-          partsOld[1] - 1,
-          partsOld[2],
-          12,
-          0,
-          0,
-        );
-
-        const diffTime = dateNew - dateOld;
-        return Math.round(diffTime / (1000 * 60 * 60 * 24));
-      }
-
-      // Tracks visits and handles streak increments/resets
-      function checkAndProcessStreak() {
-        if (!scoreState.lastActiveDate) {
-          // Brand new user initialization
-          scoreState.streak = 1;
-          scoreState.lastActiveDate = TODAY_DATE_KEY;
-          saveScoreStateToStorage();
-          logDiagnostic("Welcome to your first streak day!", "info");
-          return;
-        }
-
-        const diff = getDayDifference(
-          TODAY_DATE_KEY,
-          scoreState.lastActiveDate,
-        );
-
-        if (diff === 1) {
-          // Consecutive day return! Maxes out at 1 week (7 days)
-          scoreState.streak = Math.min(scoreState.streak + 1, 7);
-          scoreState.lastActiveDate = TODAY_DATE_KEY;
-
-          // Reward points instantly on daily retention
-          const returnBonus = scoreState.streak * 20;
-          scoreState.score += returnBonus;
-          saveScoreStateToStorage();
-
-          logDiagnostic(
-            `Daily Streak Active! Day: ${scoreState.streak}. Earned +${returnBonus} return bonus.`,
-            "info",
-          );
-
-          if (scoreSystemEnabled) {
-            setTimeout(() => {
-              showAlertDialog(
-                "Streak Active! ⚡",
-                `Welcome back! You are on a consecutive ${scoreState.streak}-day streak! Gained +${returnBonus} points. Multiplier is now ${(1 + scoreState.streak * 0.1).toFixed(1)}x!`,
-              );
-            }, 550);
-          }
-        } else if (diff > 1) {
-          // Missed a day: Streak is broken and resets to 1 (starting today)
-          logDiagnostic(
-            `Streak broke. Gap was ${diff} days. Resetting back to Day 1.`,
-            "warn",
-          );
-          scoreState.streak = 1;
-          scoreState.lastActiveDate = TODAY_DATE_KEY;
-          saveScoreStateToStorage();
-
-          if (scoreSystemEnabled) {
-            setTimeout(() => {
-              showAlertDialog(
-                "Streak Broken 💔",
-                "Ah! You missed a day. Your consecutive active tracker has reset to Day 1. Let's build a new streak starting today!",
-              );
-            }, 550);
-          }
-        }
-      }
-
-      // Renders scoreboard widget details cleanly
-      function renderScoreboard() {
-        const scoreEl = document.getElementById("score-display");
-        const starsEl = document.getElementById("streak-stars");
-        const multEl = document.getElementById("streak-multiplier");
-
-        if (scoreEl) {
-          // Retro padding
-          scoreEl.textContent = String(scoreState.score).padStart(4, "0");
-        }
-
-        if (starsEl) {
-          let starsHTML = "";
-          for (let i = 1; i <= 7; i++) {
-            if (i <= scoreState.streak) {
-              starsHTML += `<span style="color: var(--color-accent-warm); text-shadow: 1.5px 1.5px 0px var(--color-border); margin-right: 2px;">★</span>`;
-            } else {
-              starsHTML += `<span style="color: rgba(59,72,114,0.22); margin-right: 2px;">☆</span>`;
-            }
-          }
-          starsEl.innerHTML = starsHTML;
-        }
-
-        if (multEl) {
-          const multiplier = 1 + scoreState.streak * 0.1;
-          multEl.textContent = `${multiplier.toFixed(1)}x`;
-        }
-      }
-
-      // Check and award all completed tasks bonus
-      function checkAndAwardAllTasksBonus() {
-        const todayTasks = getTodayTasks();
-        if (
-          todayTasks.length > 0 &&
-          todayTasks.every((t) => t.status === "complete")
-        ) {
-          // Verify bonus has not already been secured for today
-          if (scoreState.allTasksBonusClaimedDate !== TODAY_DATE_KEY) {
-            const baseBonus = 50;
-            const multiplier = 1 + scoreState.streak * 0.1;
-            const finalBonus = Math.round(baseBonus * multiplier);
-
-            scoreState.score += finalBonus;
-            scoreState.allTasksBonusClaimedDate = TODAY_DATE_KEY;
-            saveScoreStateToStorage();
-            renderScoreboard();
-
-            logDiagnostic(
-              `ALL TASKS COMPLETED! Awarded +${finalBonus} Daily Clear bonus!`,
-              "info",
-            );
-
-            if (scoreSystemEnabled) {
-              setTimeout(() => {
-                showAlertDialog(
-                  "All Clear! 🎉",
-                  `Incredible job! You cleared all your tasks for today! Earned +${finalBonus} points (incorporating your ${multiplier.toFixed(1)}x streak multiplier).`,
-                );
-              }, 400);
-            }
-          }
-        }
-      }
-
-      // ============================================================
-      // SECTION: TASK UTILITIES
-      // ============================================================
-
-      function generateTaskId() {
-        return (
-          "task_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7)
-        );
-      }
-
-      function createTaskObject(
-        name,
-        isImportant,
-        isRecurring,
-        alwaysAppear,
-        scheduledDays,
-      ) {
-        return {
-          id: generateTaskId(),
-          name: name.trim(),
-          isImportant: isImportant,
-          isRecurring: isRecurring,
-          alwaysAppear: alwaysAppear,
-          scheduledDays: scheduledDays, // array of day name strings, or []
-          status: "pending",
-        };
-      }
-
-      function findTaskById(taskId) {
-        return allTasks.find((task) => task.id === taskId) || null;
-      }
-
-      // ============================================================
-      // SECTION: TODAY TASK SELECTION
-      // ============================================================
-
-      function buildTodaysTaskSelection() {
-        logDiagnostic("Selecting today's random tasks...", "info");
-        const alwaysIncluded = allTasks.filter(
-          (task) => task.alwaysAppear && isTaskEligibleToday(task),
-        );
-        const alwaysIds = alwaysIncluded.map((t) => t.id);
-
-        const randomPool = allTasks.filter(
-          (task) =>
-            !task.alwaysAppear &&
-            task.isRecurring &&
-            isTaskEligibleToday(task) &&
-            !alwaysIds.includes(task.id),
-        );
-
-        // Shuffle
-        const shuffled = randomPool.slice().sort(() => Math.random() - 0.5);
-        const selectedRandom = shuffled.slice(0, maxRandomTasks);
-
-        todayTaskIds = [...alwaysIds, ...selectedRandom.map((t) => t.id)];
-        saveTodayTasksToStorage();
-      }
-
-      function isTaskEligibleToday(task) {
-        if (!task.scheduledDays || task.scheduledDays.length === 0) return true;
-        return task.scheduledDays.includes(TODAY_DAY_NAME);
-      }
-
-      function getTodayTasks() {
-        return todayTaskIds
-          .map((id) => findTaskById(id))
-          .filter((task) => task !== null);
-      }
-
-      // ============================================================
-      // SECTION: TASK ACTIONS
-      // ============================================================
-
-      function markTaskAsInProgress(taskId) {
-        const task = findTaskById(taskId);
-        if (!task) return;
-        task.status = "inProgress";
-        saveAllTasksToStorage();
-        playSoundEffect("taskStart");
-        renderTodaysTasks();
-      }
-
-      function completeTask(taskId) {
-        const task = findTaskById(taskId);
-        if (!task) return;
-        task.status = "complete";
-        saveAllTasksToStorage();
-
-        // AWARD POINTS FOR COMPLETING A TASK (Influenced by Streak Levels)
-        const basePoints = task.isImportant ? 20 : 10;
-        const multiplier = 1 + scoreState.streak * 0.1;
-        const pointsEarned = Math.round(basePoints * multiplier);
-
-        scoreState.score += pointsEarned;
-        scoreState.lastActiveDate = TODAY_DATE_KEY;
-        saveScoreStateToStorage();
-        renderScoreboard();
-
-        logDiagnostic(
-          `Gained +${pointsEarned} score points (Base: ${basePoints}, Mult: ${multiplier.toFixed(1)}x)`,
-          "info",
-        );
-
-        playSoundEffect("taskComplete");
-        renderTodaysTasks();
-
-        // Evaluate if Day is fully cleared
-        checkAndAwardAllTasksBonus();
-      }
-
-      function removeTaskFromToday(taskId) {
-        todayTaskIds = todayTaskIds.filter((id) => id !== taskId);
-        saveTodayTasksToStorage();
-        playSoundEffect("taskRemove");
-        renderTodaysTasks();
-      }
-
-      function deleteTaskPermanently(taskId) {
-        allTasks = allTasks.filter((task) => task.id !== taskId);
-        todayTaskIds = todayTaskIds.filter((id) => id !== taskId);
-        saveAllTasksToStorage();
-        saveTodayTasksToStorage();
-        playSoundEffect("taskRemove");
-        renderTodaysTasks();
-        renderManageTasks();
-      }
-
-      function addNewTask(taskObject, addToToday) {
-        allTasks.push(taskObject);
-        if (addToToday) {
-          todayTaskIds.push(taskObject.id);
-          saveTodayTasksToStorage();
-        }
-        saveAllTasksToStorage();
-        renderTodaysTasks();
-        renderManageTasks();
-
-        // Re-verify clear conditions on task addition
-        checkAndAwardAllTasksBonus();
-      }
-
-      // ============================================================
-      // SECTION: RENDER — Today's Tasks
-      // ============================================================
-
-      function renderTodaysTasks() {
-        const container = document.getElementById("today-task-list");
-        if (!container) return;
-        const tasks = getTodayTasks();
-        container.innerHTML = "";
-
-        if (tasks.length === 0) {
-          container.innerHTML = `
+    }
+  }
+}
+
+// ============================================================
+// SECTION: TASK UTILITIES
+// ============================================================
+
+function generateTaskId() {
+  return "task_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+}
+
+function createTaskObject(name, isImportant, isRecurring, alwaysAppear, scheduledDays) {
+  return {
+    id:            generateTaskId(),
+    name:          name.trim(),
+    isImportant:   isImportant,
+    isRecurring:   isRecurring,
+    alwaysAppear:  alwaysAppear,
+    scheduledDays: scheduledDays, // array of day name strings, or []
+    status:        "pending",
+  };
+}
+
+function findTaskById(taskId) {
+  return allTasks.find(task => task.id === taskId) || null;
+}
+
+// ============================================================
+// SECTION: TODAY TASK SELECTION
+// ============================================================
+
+function buildTodaysTaskSelection() {
+  logDiagnostic("Selecting today's random tasks...", "info");
+  const alwaysIncluded = allTasks.filter(task =>
+    task.alwaysAppear && isTaskEligibleToday(task)
+  );
+  const alwaysIds = alwaysIncluded.map(t => t.id);
+
+  const randomPool = allTasks.filter(task =>
+    !task.alwaysAppear &&
+    task.isRecurring &&
+    isTaskEligibleToday(task) &&
+    !alwaysIds.includes(task.id)
+  );
+
+  // Shuffle
+  const shuffled = randomPool.slice().sort(() => Math.random() - 0.5);
+  const selectedRandom = shuffled.slice(0, maxRandomTasks);
+
+  todayTaskIds = [...alwaysIds, ...selectedRandom.map(t => t.id)];
+  saveTodayTasksToStorage();
+}
+
+function isTaskEligibleToday(task) {
+  if (!task.scheduledDays || task.scheduledDays.length === 0) return true;
+  return task.scheduledDays.includes(TODAY_DAY_NAME);
+}
+
+function getTodayTasks() {
+  return todayTaskIds
+    .map(id => findTaskById(id))
+    .filter(task => task !== null);
+}
+
+// ============================================================
+// SECTION: TASK ACTIONS
+// ============================================================
+
+function markTaskAsInProgress(taskId) {
+  const task = findTaskById(taskId);
+  if (!task) return;
+  task.status = "inProgress";
+  saveAllTasksToStorage();
+  playSoundEffect("taskStart");
+  renderTodaysTasks();
+}
+
+function completeTask(taskId) {
+  const task = findTaskById(taskId);
+  if (!task) return;
+  task.status = "complete";
+  saveAllTasksToStorage();
+
+  // AWARD POINTS FOR COMPLETING A TASK (Influenced by Streak Levels)
+  const basePoints = task.isImportant ? 20 : 10;
+  const multiplier = 1 + (scoreState.streak * 0.1);
+  const pointsEarned = Math.round(basePoints * multiplier);
+  
+  scoreState.score += pointsEarned;
+  scoreState.lastActiveDate = TODAY_DATE_KEY;
+  saveScoreStateToStorage();
+  renderScoreboard();
+
+  logDiagnostic(`Gained +${pointsEarned} score points (Base: ${basePoints}, Mult: ${multiplier.toFixed(1)}x)`, "info");
+
+  playSoundEffect("taskComplete");
+  renderTodaysTasks();
+
+  // Evaluate if Day is fully cleared
+  checkAndAwardAllTasksBonus();
+}
+
+function removeTaskFromToday(taskId) {
+  todayTaskIds = todayTaskIds.filter(id => id !== taskId);
+  saveTodayTasksToStorage();
+  playSoundEffect("taskRemove");
+  renderTodaysTasks();
+}
+
+function deleteTaskPermanently(taskId) {
+  allTasks = allTasks.filter(task => task.id !== taskId);
+  todayTaskIds = todayTaskIds.filter(id => id !== taskId);
+  saveAllTasksToStorage();
+  saveTodayTasksToStorage();
+  playSoundEffect("taskRemove");
+  renderTodaysTasks();
+  renderManageTasks();
+}
+
+function addNewTask(taskObject, addToToday) {
+  allTasks.push(taskObject);
+  if (addToToday) {
+    todayTaskIds.push(taskObject.id);
+    saveTodayTasksToStorage();
+  }
+  saveAllTasksToStorage();
+  renderTodaysTasks();
+  renderManageTasks();
+  
+  // Re-verify clear conditions on task addition
+  checkAndAwardAllTasksBonus();
+}
+
+// ============================================================
+// SECTION: RENDER — Today's Tasks
+// ============================================================
+
+function renderTodaysTasks() {
+  const container = document.getElementById("today-task-list");
+  if (!container) return;
+  const tasks = getTodayTasks();
+  container.innerHTML = "";
+
+  if (tasks.length === 0) {
+    container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">✓</div>
         <div>No tasks for today.<br>Add one or reset to re-roll.</div>
       </div>`;
-          return;
-        }
+    return;
+  }
 
-        tasks.forEach((task, index) => {
-          const card = document.createElement("div");
-          card.className = buildTaskCardClassName(task) + " fade-up";
-          card.style.animationDelay = index * 0.05 + "s";
+  tasks.forEach((task, index) => {
+    const card = document.createElement("div");
+    card.className = buildTaskCardClassName(task) + " fade-up";
+    card.style.animationDelay = (index * 0.05) + "s";
 
-          const statusLabel =
-            task.status === "inProgress"
-              ? "In Progress"
-              : task.status === "complete"
-                ? "Complete"
-                : "";
+    const statusLabel = task.status === "inProgress" ? "In Progress"
+                       : task.status === "complete"  ? "Complete"
+                       : "";
 
-          const tags = buildTaskTagsHTML(task);
+    const tags = buildTaskTagsHTML(task);
 
-          card.innerHTML = `
-      <div class="task-card-name ${task.status === "complete" ? "strikethrough" : ""}">
+    card.innerHTML = `
+      <div class="task-card-name ${task.status === 'complete' ? 'strikethrough' : ''}">
         ${escapeHTML(task.name)}
         ${statusLabel ? `<span class="text-muted" style="font-size:11px; font-family:var(--font-mono);"> — ${statusLabel}</span>` : ""}
       </div>
       ${tags}
       <div class="task-card-actions">
-        ${
-          task.status !== "inProgress" && task.status !== "complete"
-            ? `<button class="btn btn-warn" onclick="markTaskAsInProgress('${task.id}')">Start</button>`
-            : ""
-        }
-        ${
-          task.status !== "complete"
-            ? `<button class="btn btn-success" onclick="completeTask('${task.id}')">Done</button>`
-            : ""
-        }
+        ${task.status !== "inProgress" && task.status !== "complete"
+          ? `<button class="btn btn-warn" onclick="markTaskAsInProgress('${task.id}')">Start</button>` : ""}
+        ${task.status !== "complete"
+          ? `<button class="btn btn-success" onclick="completeTask('${task.id}')">Done</button>` : ""}
         <button class="btn" onclick="removeTaskFromToday('${task.id}')">Remove</button>
       </div>`;
-          container.appendChild(card);
-        });
-      }
+    container.appendChild(card);
+  });
+}
 
-      function buildTaskCardClassName(task) {
-        let classes = "task-card";
-        if (task.isImportant && task.status !== "complete")
-          classes += " is-important";
-        if (task.status === "inProgress") classes += " status-inProgress";
-        if (task.status === "complete") classes += " status-complete";
-        return classes;
-      }
+function buildTaskCardClassName(task) {
+  let classes = "task-card";
+  if (task.isImportant && task.status !== "complete") classes += " is-important";
+  if (task.status === "inProgress") classes += " status-inProgress";
+  if (task.status === "complete")   classes += " status-complete";
+  return classes;
+}
 
-      function buildTaskTagsHTML(task) {
-        const chips = [];
-        if (task.isImportant)
-          chips.push(`<span class="task-tag important">Important</span>`);
-        if (task.alwaysAppear)
-          chips.push(`<span class="task-tag always">Always</span>`);
-        if (task.isRecurring)
-          chips.push(`<span class="task-tag recurring">Recurring</span>`);
-        if (task.scheduledDays && task.scheduledDays.length > 0) {
-          chips.push(
-            `<span class="task-tag scheduled">${task.scheduledDays.map((d) => d.slice(0, 3)).join(", ")}</span>`,
-          );
-        }
-        if (chips.length === 0) return "";
-        return `<div class="task-card-tags">${chips.join("")}</div>`;
-      }
+function buildTaskTagsHTML(task) {
+  const chips = [];
+  if (task.isImportant) chips.push(`<span class="task-tag important">Important</span>`);
+  if (task.alwaysAppear) chips.push(`<span class="task-tag always">Always</span>`);
+  if (task.isRecurring)  chips.push(`<span class="task-tag recurring">Recurring</span>`);
+  if (task.scheduledDays && task.scheduledDays.length > 0) {
+    chips.push(`<span class="task-tag scheduled">${task.scheduledDays.map(d => d.slice(0,3)).join(", ")}</span>`);
+  }
+  if (chips.length === 0) return "";
+  return `<div class="task-card-tags">${chips.join("")}</div>`;
+}
 
-      // ============================================================
-      // SECTION: RENDER — Manage Tasks
-      // ============================================================
+// ============================================================
+// SECTION: RENDER — Manage Tasks
+// ============================================================
 
-      function renderManageTasks() {
-        const container = document.getElementById("manage-task-list");
-        if (!container) return;
-        container.innerHTML = "";
+function renderManageTasks() {
+  const container = document.getElementById("manage-task-list");
+  if (!container) return;
+  container.innerHTML = "";
 
-        if (allTasks.length === 0) {
-          container.innerHTML = `
+  if (allTasks.length === 0) {
+    container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">⊞</div>
         <div>No tasks yet. Add your first task above.</div>
       </div>`;
-          return;
-        }
+    return;
+  }
 
-        allTasks.forEach((task, index) => {
-          const row = document.createElement("div");
-          let rowClass = "manage-task-row fade-up";
-          if (task.isImportant) rowClass += " is-important";
-          if (task.alwaysAppear) rowClass += " always-appear";
-          row.className = rowClass;
-          row.style.animationDelay = index * 0.04 + "s";
+  allTasks.forEach((task, index) => {
+    const row = document.createElement("div");
+    let rowClass = "manage-task-row fade-up";
+    if (task.isImportant)  rowClass += " is-important";
+    if (task.alwaysAppear) rowClass += " always-appear";
+    row.className = rowClass;
+    row.style.animationDelay = (index * 0.04) + "s";
 
-          const scheduledLabel =
-            task.scheduledDays && task.scheduledDays.length > 0
-              ? task.scheduledDays.join(", ")
-              : "Any day";
+    const scheduledLabel = task.scheduledDays && task.scheduledDays.length > 0
+      ? task.scheduledDays.join(", ")
+      : "Any day";
 
-          const editorId = "days-editor-" + task.id;
-          const daysGridId = "days-grid-" + task.id;
-          const daysLabelId = "days-label-" + task.id;
+    const editorId    = "days-editor-" + task.id;
+    const daysGridId  = "days-grid-" + task.id;
+    const daysLabelId = "days-label-" + task.id;
 
-          row.dataset.taskid = task.id;
-          row.innerHTML = `
+    row.dataset.taskid = task.id;
+    row.innerHTML = `
       <div class="manage-task-name">${escapeHTML(task.name)}</div>
       <div class="manage-days" id="${daysLabelId}">📅 ${scheduledLabel}</div>
       <div class="manage-task-controls mt-sm">
-        <span class="toggle-pill ${task.isImportant ? "important-on" : ""}" data-action="important">
+        <span class="toggle-pill ${task.isImportant ? 'important-on' : ''}" data-action="important">
           ${task.isImportant ? "⚑ Important" : "Important"}
         </span>
-        <span class="toggle-pill ${task.alwaysAppear ? "always-on" : ""}" data-action="always">
+        <span class="toggle-pill ${task.alwaysAppear ? 'always-on' : ''}" data-action="always">
           ${task.alwaysAppear ? "★ Always" : "Always"}
         </span>
-        <span class="toggle-pill ${task.isRecurring ? "on" : ""}" data-action="recurring">
+        <span class="toggle-pill ${task.isRecurring ? 'on' : ''}" data-action="recurring">
           ${task.isRecurring ? "↻ Recurring" : "Recurring"}
         </span>
         <span class="toggle-pill" data-action="editdays">📅 Days</span>
@@ -2173,605 +1746,544 @@ AI used for rapid prototyping, with human touchups after
           <button class="btn" data-action="canceldays">Cancel</button>
         </div>
       </div>`;
-          container.appendChild(row);
-        });
-      }
+    container.appendChild(row);
+  });
+}
 
-      function toggleTaskImportant(taskId) {
-        const task = findTaskById(taskId);
-        if (!task) return;
-        task.isImportant = !task.isImportant;
+function toggleTaskImportant(taskId) {
+  const task = findTaskById(taskId);
+  if (!task) return;
+  task.isImportant = !task.isImportant;
+  saveAllTasksToStorage();
+  renderManageTasks();
+  renderTodaysTasks();
+}
+
+function toggleTaskAlwaysAppear(taskId) {
+  const task = findTaskById(taskId);
+  if (!task) return;
+  task.alwaysAppear = !task.alwaysAppear;
+  saveAllTasksToStorage();
+  renderManageTasks();
+}
+
+function toggleTaskRecurring(taskId) {
+  const task = findTaskById(taskId);
+  if (!task) return;
+  task.isRecurring = !task.isRecurring;
+  saveAllTasksToStorage();
+  renderManageTasks();
+}
+
+// ============================================================
+// SECTION: MANAGE TAB — event delegation for row actions
+// Handles all clicks inside #manage-task-list via data-action
+// ============================================================
+
+function attachManageListDelegation() {
+  const manageList = document.getElementById("manage-task-list");
+  if (!manageList) return;
+
+  manageList.addEventListener("click", function handleManageListClick(event) {
+    const actionTarget = event.target.closest("[data-action]");
+    if (!actionTarget) return;
+
+    const action = actionTarget.dataset.action;
+    const row    = actionTarget.closest(".manage-task-row");
+    if (!row) return;
+
+    const taskId = row.dataset.taskid;
+    if (!taskId) return;
+
+    if (action === "important") {
+      playSoundEffect("menuClick");
+      toggleTaskImportant(taskId);
+
+    } else if (action === "always") {
+      playSoundEffect("menuClick");
+      toggleTaskAlwaysAppear(taskId);
+
+    } else if (action === "recurring") {
+      playSoundEffect("menuClick");
+      toggleTaskRecurring(taskId);
+
+    } else if (action === "delete") {
+      deleteTaskPermanently(taskId);
+
+    } else if (action === "editdays") {
+      playSoundEffect("menuClick");
+      // Close any other open editors
+      document.querySelectorAll(".inline-days-editor.visible").forEach(openEditor => {
+        openEditor.classList.remove("visible");
+      });
+      // Find and open this row's editor
+      const editor   = row.querySelector(".inline-days-editor");
+      const daysGrid = row.querySelector(".days-grid");
+      if (!editor || !daysGrid) return;
+      const task = findTaskById(taskId);
+      if (!task) return;
+      buildDayChipsInGrid(daysGrid.id, task.scheduledDays || []);
+      editor.classList.add("visible");
+
+    } else if (action === "savedays") {
+      playSoundEffect("formSave");
+      const editor   = row.querySelector(".inline-days-editor");
+      const daysGrid = row.querySelector(".days-grid");
+      if (!editor || !daysGrid) return;
+      const task = findTaskById(taskId);
+      if (!task) return;
+      task.scheduledDays = getSelectedDaysFromGrid(daysGrid.id);
+      saveAllTasksToStorage();
+      renderManageTasks();
+
+    } else if (action === "canceldays") {
+      playSoundEffect("formCancel");
+      const editor = row.querySelector(".inline-days-editor");
+      if (editor) editor.classList.remove("visible");
+    }
+  });
+}
+
+// ============================================================
+// SECTION: TASK FORM — shared day-chip builder
+// ============================================================
+
+function buildDayChipsInGrid(gridElementId, selectedDays) {
+  const grid = document.getElementById(gridElementId);
+  if (!grid) return;
+  grid.innerHTML = "";
+  DAY_NAMES.forEach(day => {
+    const chip = document.createElement("span");
+    chip.className = "day-chip" + (selectedDays.includes(day) ? " selected" : "");
+    chip.textContent = day.slice(0, 3);
+    chip.dataset.day = day;
+    chip.addEventListener("click", () => {
+      chip.classList.toggle("selected");
+      playSoundEffect("menuClick");
+    });
+    grid.appendChild(chip);
+  });
+}
+
+function getSelectedDaysFromGrid(gridElementId) {
+  const grid = document.getElementById(gridElementId);
+  if (!grid) return [];
+  return Array.from(grid.querySelectorAll(".day-chip.selected")).map(chip => chip.dataset.day);
+}
+
+function openTaskForm(panelId, daysGridId) {
+  const panel = document.getElementById(panelId);
+  if (panel) {
+    panel.classList.add("visible");
+    buildDayChipsInGrid(daysGridId, []);
+  }
+}
+
+function closeTaskForm(panelId) {
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.remove("visible");
+}
+
+function collectAndSaveTaskFromForm(nameInputId, errorLabelId, importantCheckId, recurringCheckId, alwaysCheckId, daysGridId, addToToday, panelId) {
+  const nameEl = document.getElementById(nameInputId);
+  const errorEl = document.getElementById(errorLabelId);
+  if (!nameEl) return;
+
+  const name = nameEl.value.trim();
+  if (!name) { 
+    if (errorEl) {
+      errorEl.textContent = "Please enter a task name.";
+      errorEl.style.display = "block";
+    } else {
+      showAlertDialog("Missing Field", "Please enter a task name.");
+    }
+    return; 
+  }
+
+  if (errorEl) {
+    errorEl.style.display = "none";
+  }
+
+  const isImportant  = document.getElementById(importantCheckId).checked;
+  const isRecurring  = document.getElementById(recurringCheckId).checked;
+  const alwaysAppear = document.getElementById(alwaysCheckId).checked;
+  const scheduledDays = getSelectedDaysFromGrid(daysGridId);
+
+  const newTask = createTaskObject(name, isImportant, isRecurring, alwaysAppear, scheduledDays);
+
+  // Clear form fields
+  nameEl.value = "";
+  document.getElementById(importantCheckId).checked = false;
+  document.getElementById(recurringCheckId).checked = true;
+  document.getElementById(alwaysCheckId).checked    = false;
+
+  addNewTask(newTask, addToToday);
+  closeTaskForm(panelId);
+  playSoundEffect("formSave");
+}
+
+// ============================================================
+// SECTION: SOUND EFFECTS
+// ============================================================
+
+function playSoundEffect(soundName) {
+  if (!soundEffectsEnabled) return;
+  const url = SOUND_EFFECTS[soundName];
+  if (!url) return;
+  try {
+    const audioElement = new Audio(url);
+    audioElement.volume = 0.4;
+    audioElement.play().catch(() => { /* autoplay blocked — ignore */ });
+  } catch (error) { /* ignore */ }
+}
+
+// ============================================================
+// SECTION: MUSIC PLAYER
+// ============================================================
+
+function loadCurrentTrack() {
+  const track = MUSIC_TRACKS[currentSongIndex];
+  if (!track) return;
+  musicAudioElement.src = track.url;
+  musicAudioElement.load();
+  safeSetText("music-track-title", track.title);
+  safeSetText("music-track-index", `${currentSongIndex + 1} / ${MUSIC_TRACKS.length}`);
+}
+
+function playMusic() {
+  if (!musicEnabled) return;
+  musicAudioElement.play().catch(() => { /* autoplay blocked */ });
+  isMusicPlaying = true;
+  const playBtn = document.getElementById("music-play-btn");
+  if (playBtn) playBtn.innerHTML = "&#9646;&#9646; Pause";
+  
+  const disc = document.getElementById("music-disc");
+  if (disc) disc.classList.add("spinning");
+}
+
+function pauseMusic() {
+  musicAudioElement.pause();
+  isMusicPlaying = false;
+  const playBtn = document.getElementById("music-play-btn");
+  if (playBtn) playBtn.innerHTML = "&#9654; Play";
+  
+  const disc = document.getElementById("music-disc");
+  if (disc) disc.classList.remove("spinning");
+}
+
+function togglePlayPause() {
+  playSoundEffect("menuClick");
+  if (isMusicPlaying) { pauseMusic(); } else { playMusic(); }
+}
+
+// Go to next track automatically/manually
+function goToNextTrack() {
+  playSoundEffect("menuClick");
+  currentSongIndex = (currentSongIndex + 1) % MUSIC_TRACKS.length;
+  loadCurrentTrack();
+  if (isMusicPlaying) playMusic();
+}
+
+// Go to previous track manually
+function goToPreviousTrack() {
+  playSoundEffect("menuClick");
+  currentSongIndex = (currentSongIndex - 1 + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;
+  loadCurrentTrack();
+  if (isMusicPlaying) playMusic();
+}
+
+// Auto-advance when track ends
+musicAudioElement.addEventListener("ended", goToNextTrack);
+
+// ============================================================
+// SECTION: TAB SWITCHING
+// ============================================================
+
+function switchToTab(tabName) {
+  document.querySelectorAll(".tab-content").forEach(panel => panel.classList.remove("active"));
+  document.querySelectorAll(".tab-button").forEach(button => button.classList.remove("active"));
+
+  const targetTab = document.getElementById("tab-" + tabName);
+  const targetBtn = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
+  
+  if (targetTab) targetTab.classList.add("active");
+  if (targetBtn) targetBtn.classList.add("active");
+
+  playSoundEffect("menuClick");
+}
+
+// ============================================================
+// SECTION: SETTINGS
+// ============================================================
+
+function applySettingsToUI() {
+  const checkMusic = document.getElementById("setting-music");
+  const checkSFX = document.getElementById("setting-sfx");
+  const checkSimple = document.getElementById("setting-simplified");
+  const checkLimit = document.getElementById("setting-random-limit");
+  const checkScore = document.getElementById("setting-score");
+
+  if (checkMusic) checkMusic.checked = musicEnabled;
+  if (checkSFX) checkSFX.checked = soundEffectsEnabled;
+  if (checkSimple) checkSimple.checked = simplifiedUI;
+  if (checkLimit) checkLimit.value = maxRandomTasks;
+  if (checkScore) checkScore.checked = scoreSystemEnabled;
+
+  const musicTabButton = document.getElementById("music-tab-btn");
+  if (musicTabButton) {
+    if (musicEnabled) {
+      musicTabButton.classList.remove("hidden");
+    } else {
+      musicTabButton.classList.add("hidden");
+      pauseMusic();
+      // If on music tab, switch to today
+      const musicTab = document.getElementById("tab-music");
+      if (musicTab && musicTab.classList.contains("active")) {
+        switchToTab("today");
+      }
+    }
+  }
+
+  if (simplifiedUI) {
+    document.body.classList.add("simplified");
+  } else {
+    document.body.classList.remove("simplified");
+  }
+
+  const scoreWidget = document.getElementById("scoreboard-widget");
+  if (scoreWidget) {
+    if (scoreSystemEnabled) {
+      scoreWidget.classList.remove("hidden");
+    } else {
+      scoreWidget.classList.add("hidden");
+    }
+  }
+}
+
+function onSettingMusicChanged() {
+  const checkMusic = document.getElementById("setting-music");
+  if (checkMusic) {
+    musicEnabled = checkMusic.checked;
+    playSoundEffect("settingToggle");
+    saveSettingsToStorage();
+    applySettingsToUI();
+  }
+}
+
+function onSettingSFXChanged() {
+  const checkSFX = document.getElementById("setting-sfx");
+  if (checkSFX) {
+    soundEffectsEnabled = checkSFX.checked;
+    playSoundEffect("settingToggle");
+    saveSettingsToStorage();
+  }
+}
+
+function onSettingSimplifiedChanged() {
+  const checkSimple = document.getElementById("setting-simplified");
+  if (checkSimple) {
+    simplifiedUI = checkSimple.checked;
+    playSoundEffect("settingToggle");
+    saveSettingsToStorage();
+    applySettingsToUI();
+  }
+}
+
+// ============================================================
+// SECTION: SEED DATA (first-run defaults)
+// ============================================================
+
+function seedDefaultTasksIfEmpty() {
+  // All initial default starter tasks have been removed.
+  // The user now starts with a completely fresh, empty list!
+  logDiagnostic("App starting with clean slate. No default tasks seeded.", "info");
+}
+
+// ============================================================
+// SECTION: EVENT LISTENERS — Wire up all UI interactions
+// ============================================================
+
+function attachEventListeners() {
+  logDiagnostic("Attaching event listeners...", "info");
+
+  // --- Tab buttons ---
+  document.querySelectorAll(".tab-button").forEach(button => {
+    button.addEventListener("click", () => switchToTab(button.dataset.tab));
+  });
+
+  // --- Today tab: Add Task form ---
+  const addTodayBtn = document.getElementById("add-task-today-btn");
+  if (addTodayBtn) {
+    addTodayBtn.addEventListener("click", () => {
+      openTaskForm("today-form-panel", "today-form-days-grid");
+      playSoundEffect("menuClick");
+    });
+  }
+
+  const cancelTodayBtn = document.getElementById("today-form-back-btn");
+  if (cancelTodayBtn) {
+    cancelTodayBtn.addEventListener("click", () => {
+      closeTaskForm("today-form-panel");
+      playSoundEffect("formCancel");
+    });
+  }
+
+  const saveTodayBtn = document.getElementById("today-form-save-btn");
+  if (saveTodayBtn) {
+    saveTodayBtn.addEventListener("click", () => {
+      collectAndSaveTaskFromForm(
+        "today-form-name", "today-form-error", "today-form-important",
+        "today-form-recurring", "today-form-always",
+        "today-form-days-grid",
+        true, // addToToday = yes
+        "today-form-panel"
+      );
+    });
+  }
+
+  // --- Manage tab: event delegation for row actions ---
+  attachManageListDelegation();
+
+  // --- Manage tab: Add Task form ---
+  const addManageBtn = document.getElementById("add-task-manage-btn");
+  if (addManageBtn) {
+    addManageBtn.addEventListener("click", () => {
+      openTaskForm("manage-form-panel", "manage-form-days-grid");
+      playSoundEffect("menuClick");
+    });
+  }
+
+  const cancelManageBtn = document.getElementById("manage-form-back-btn");
+  if (cancelManageBtn) {
+    cancelManageBtn.addEventListener("click", () => {
+      closeTaskForm("manage-form-panel");
+      playSoundEffect("formCancel");
+    });
+  }
+
+  const saveManageBtn = document.getElementById("manage-form-save-btn");
+  if (saveManageBtn) {
+    saveManageBtn.addEventListener("click", () => {
+      collectAndSaveTaskFromForm(
+        "manage-form-name", "manage-form-error", "manage-form-important",
+        "manage-form-recurring", "manage-form-always",
+        "manage-form-days-grid",
+        false, // addToToday = no (manage tab: just add to master list)
+        "manage-form-panel"
+      );
+    });
+  }
+
+  // --- Music player ---
+  const playBtn = document.getElementById("music-play-btn");
+  if (playBtn) playBtn.addEventListener("click", togglePlayPause);
+  
+  const nextBtn = document.getElementById("music-next-btn");
+  if (nextBtn) nextBtn.addEventListener("click", goToNextTrack);
+  
+  const prevBtn = document.getElementById("music-prev-btn");
+  if (prevBtn) prevBtn.addEventListener("click", goToPreviousTrack);
+
+  // --- Settings toggles ---
+  const musicToggle = document.getElementById("setting-music");
+  if (musicToggle) musicToggle.addEventListener("change", onSettingMusicChanged);
+  
+  const sfxToggle = document.getElementById("setting-sfx");
+  if (sfxToggle) sfxToggle.addEventListener("change", onSettingSFXChanged);
+  
+  const simpleToggle = document.getElementById("setting-simplified");
+  if (simpleToggle) simpleToggle.addEventListener("change", onSettingSimplifiedChanged);
+
+  const scoreToggle = document.getElementById("setting-score");
+  if (scoreToggle) {
+    scoreToggle.addEventListener("change", () => {
+      scoreSystemEnabled = scoreToggle.checked;
+      playSoundEffect("settingToggle");
+      saveSettingsToStorage();
+      applySettingsToUI();
+    });
+  }
+
+  // --- Settings daily task pool limit ---
+  const limitInput = document.getElementById("setting-random-limit");
+  if (limitInput) {
+    limitInput.addEventListener("change", () => {
+      let val = parseInt(limitInput.value, 10);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 50) val = 50; // clamp maximum pool limit parameter to 50
+      maxRandomTasks = val;
+      limitInput.value = val;
+      playSoundEffect("settingToggle");
+      saveSettingsToStorage();
+      logDiagnostic(`Daily task selection pool limit changed to: ${maxRandomTasks}`, "info");
+    });
+  }
+
+  // --- Reset today ---
+  const resetBtn = document.getElementById("reset-today-btn");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", async () => {
+      playSoundEffect("settingAction");
+      // Replaced standard confirm() with customized non-blocking promise-based modal dialog
+      const userConfirmed = await showConfirmDialog(
+        "Re-roll tasks", 
+        "Re-roll today's tasks? Current progress will be cleared."
+      );
+      if (userConfirmed) {
+        logDiagnostic("User cleared today's task selection. Re-rolling pools...", "info");
+        // Reset status on all tasks
+        allTasks.forEach(task => { task.status = "pending"; });
         saveAllTasksToStorage();
-        renderManageTasks();
+        buildTodaysTaskSelection();
         renderTodaysTasks();
+        playSoundEffect("settingToggle");
       }
-
-      function toggleTaskAlwaysAppear(taskId) {
-        const task = findTaskById(taskId);
-        if (!task) return;
-        task.alwaysAppear = !task.alwaysAppear;
-        saveAllTasksToStorage();
-        renderManageTasks();
-      }
-
-      function toggleTaskRecurring(taskId) {
-        const task = findTaskById(taskId);
-        if (!task) return;
-        task.isRecurring = !task.isRecurring;
-        saveAllTasksToStorage();
-        renderManageTasks();
-      }
-
-      // ============================================================
-      // SECTION: MANAGE TAB — event delegation for row actions
-      // Handles all clicks inside #manage-task-list via data-action
-      // ============================================================
-
-      function attachManageListDelegation() {
-        const manageList = document.getElementById("manage-task-list");
-        if (!manageList) return;
-
-        manageList.addEventListener(
-          "click",
-          function handleManageListClick(event) {
-            const actionTarget = event.target.closest("[data-action]");
-            if (!actionTarget) return;
-
-            const action = actionTarget.dataset.action;
-            const row = actionTarget.closest(".manage-task-row");
-            if (!row) return;
-
-            const taskId = row.dataset.taskid;
-            if (!taskId) return;
-
-            if (action === "important") {
-              playSoundEffect("menuClick");
-              toggleTaskImportant(taskId);
-            } else if (action === "always") {
-              playSoundEffect("menuClick");
-              toggleTaskAlwaysAppear(taskId);
-            } else if (action === "recurring") {
-              playSoundEffect("menuClick");
-              toggleTaskRecurring(taskId);
-            } else if (action === "delete") {
-              deleteTaskPermanently(taskId);
-            } else if (action === "editdays") {
-              playSoundEffect("menuClick");
-              // Close any other open editors
-              document
-                .querySelectorAll(".inline-days-editor.visible")
-                .forEach((openEditor) => {
-                  openEditor.classList.remove("visible");
-                });
-              // Find and open this row's editor
-              const editor = row.querySelector(".inline-days-editor");
-              const daysGrid = row.querySelector(".days-grid");
-              if (!editor || !daysGrid) return;
-              const task = findTaskById(taskId);
-              if (!task) return;
-              buildDayChipsInGrid(daysGrid.id, task.scheduledDays || []);
-              editor.classList.add("visible");
-            } else if (action === "savedays") {
-              playSoundEffect("formSave");
-              const editor = row.querySelector(".inline-days-editor");
-              const daysGrid = row.querySelector(".days-grid");
-              if (!editor || !daysGrid) return;
-              const task = findTaskById(taskId);
-              if (!task) return;
-              task.scheduledDays = getSelectedDaysFromGrid(daysGrid.id);
-              saveAllTasksToStorage();
-              renderManageTasks();
-            } else if (action === "canceldays") {
-              playSoundEffect("formCancel");
-              const editor = row.querySelector(".inline-days-editor");
-              if (editor) editor.classList.remove("visible");
-            }
-          },
-        );
-      }
-
-      // ============================================================
-      // SECTION: TASK FORM — shared day-chip builder
-      // ============================================================
-
-      function buildDayChipsInGrid(gridElementId, selectedDays) {
-        const grid = document.getElementById(gridElementId);
-        if (!grid) return;
-        grid.innerHTML = "";
-        DAY_NAMES.forEach((day) => {
-          const chip = document.createElement("span");
-          chip.className =
-            "day-chip" + (selectedDays.includes(day) ? " selected" : "");
-          chip.textContent = day.slice(0, 3);
-          chip.dataset.day = day;
-          chip.addEventListener("click", () => {
-            chip.classList.toggle("selected");
-            playSoundEffect("menuClick");
-          });
-          grid.appendChild(chip);
-        });
-      }
-
-      function getSelectedDaysFromGrid(gridElementId) {
-        const grid = document.getElementById(gridElementId);
-        if (!grid) return [];
-        return Array.from(grid.querySelectorAll(".day-chip.selected")).map(
-          (chip) => chip.dataset.day,
-        );
-      }
-
-      function openTaskForm(panelId, daysGridId) {
-        const panel = document.getElementById(panelId);
-        if (panel) {
-          panel.classList.add("visible");
-          buildDayChipsInGrid(daysGridId, []);
-        }
-      }
-
-      function closeTaskForm(panelId) {
-        const panel = document.getElementById(panelId);
-        if (panel) panel.classList.remove("visible");
-      }
-
-      function collectAndSaveTaskFromForm(
-        nameInputId,
-        errorLabelId,
-        importantCheckId,
-        recurringCheckId,
-        alwaysCheckId,
-        daysGridId,
-        addToToday,
-        panelId,
-      ) {
-        const nameEl = document.getElementById(nameInputId);
-        const errorEl = document.getElementById(errorLabelId);
-        if (!nameEl) return;
-
-        const name = nameEl.value.trim();
-        if (!name) {
-          if (errorEl) {
-            errorEl.textContent = "Please enter a task name.";
-            errorEl.style.display = "block";
-          } else {
-            showAlertDialog("Missing Field", "Please enter a task name.");
-          }
-          return;
-        }
-
-        if (errorEl) {
-          errorEl.style.display = "none";
-        }
-
-        const isImportant = document.getElementById(importantCheckId).checked;
-        const isRecurring = document.getElementById(recurringCheckId).checked;
-        const alwaysAppear = document.getElementById(alwaysCheckId).checked;
-        const scheduledDays = getSelectedDaysFromGrid(daysGridId);
-
-        const newTask = createTaskObject(
-          name,
-          isImportant,
-          isRecurring,
-          alwaysAppear,
-          scheduledDays,
-        );
-
-        // Clear form fields
-        nameEl.value = "";
-        document.getElementById(importantCheckId).checked = false;
-        document.getElementById(recurringCheckId).checked = true;
-        document.getElementById(alwaysCheckId).checked = false;
-
-        addNewTask(newTask, addToToday);
-        closeTaskForm(panelId);
-        playSoundEffect("formSave");
-      }
-
-      // ============================================================
-      // SECTION: SOUND EFFECTS
-      // ============================================================
-
-      function playSoundEffect(soundName) {
-        if (!soundEffectsEnabled) return;
-        const url = SOUND_EFFECTS[soundName];
-        if (!url) return;
-        try {
-          const audioElement = new Audio(url);
-          audioElement.volume = 0.4;
-          audioElement.play().catch(() => {
-            /* autoplay blocked — ignore */
-          });
-        } catch (error) {
-          /* ignore */
-        }
-      }
-
-      // ============================================================
-      // SECTION: MUSIC PLAYER
-      // ============================================================
-
-      function loadCurrentTrack() {
-        const track = MUSIC_TRACKS[currentSongIndex];
-        if (!track) return;
-        musicAudioElement.src = track.url;
-        musicAudioElement.load();
-        safeSetText("music-track-title", track.title);
-        safeSetText(
-          "music-track-index",
-          `${currentSongIndex + 1} / ${MUSIC_TRACKS.length}`,
-        );
-      }
-
-      function playMusic() {
-        if (!musicEnabled) return;
-        musicAudioElement.play().catch(() => {
-          /* autoplay blocked */
-        });
-        isMusicPlaying = true;
-        const playBtn = document.getElementById("music-play-btn");
-        if (playBtn) playBtn.innerHTML = "&#9646;&#9646; Pause";
-
-        const disc = document.getElementById("music-disc");
-        if (disc) disc.classList.add("spinning");
-      }
-
-      function pauseMusic() {
-        musicAudioElement.pause();
-        isMusicPlaying = false;
-        const playBtn = document.getElementById("music-play-btn");
-        if (playBtn) playBtn.innerHTML = "&#9654; Play";
-
-        const disc = document.getElementById("music-disc");
-        if (disc) disc.classList.remove("spinning");
-      }
-
-      function togglePlayPause() {
-        playSoundEffect("menuClick");
-        if (isMusicPlaying) {
-          pauseMusic();
-        } else {
-          playMusic();
-        }
-      }
-
-      // Go to next track automatically/manually
-      function goToNextTrack() {
-        playSoundEffect("menuClick");
-        currentSongIndex = (currentSongIndex + 1) % MUSIC_TRACKS.length;
-        loadCurrentTrack();
-        if (isMusicPlaying) playMusic();
-      }
-
-      // Go to previous track manually
-      function goToPreviousTrack() {
-        playSoundEffect("menuClick");
-        currentSongIndex =
-          (currentSongIndex - 1 + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;
-        loadCurrentTrack();
-        if (isMusicPlaying) playMusic();
-      }
-
-      // Auto-advance when track ends
-      musicAudioElement.addEventListener("ended", goToNextTrack);
-
-      // ============================================================
-      // SECTION: TAB SWITCHING
-      // ============================================================
-
-      function switchToTab(tabName) {
-        document
-          .querySelectorAll(".tab-content")
-          .forEach((panel) => panel.classList.remove("active"));
-        document
-          .querySelectorAll(".tab-button")
-          .forEach((button) => button.classList.remove("active"));
-
-        const targetTab = document.getElementById("tab-" + tabName);
-        const targetBtn = document.querySelector(
-          `.tab-button[data-tab="${tabName}"]`,
-        );
-
-        if (targetTab) targetTab.classList.add("active");
-        if (targetBtn) targetBtn.classList.add("active");
-
-        playSoundEffect("menuClick");
-      }
-
-      // ============================================================
-      // SECTION: SETTINGS
-      // ============================================================
-
-      function applySettingsToUI() {
-        const checkMusic = document.getElementById("setting-music");
-        const checkSFX = document.getElementById("setting-sfx");
-        const checkSimple = document.getElementById("setting-simplified");
-        const checkLimit = document.getElementById("setting-random-limit");
-        const checkScore = document.getElementById("setting-score");
-
-        if (checkMusic) checkMusic.checked = musicEnabled;
-        if (checkSFX) checkSFX.checked = soundEffectsEnabled;
-        if (checkSimple) checkSimple.checked = simplifiedUI;
-        if (checkLimit) checkLimit.value = maxRandomTasks;
-        if (checkScore) checkScore.checked = scoreSystemEnabled;
-
-        const musicTabButton = document.getElementById("music-tab-btn");
-        if (musicTabButton) {
-          if (musicEnabled) {
-            musicTabButton.classList.remove("hidden");
-          } else {
-            musicTabButton.classList.add("hidden");
-            pauseMusic();
-            // If on music tab, switch to today
-            const musicTab = document.getElementById("tab-music");
-            if (musicTab && musicTab.classList.contains("active")) {
-              switchToTab("today");
-            }
-          }
-        }
-
-        if (simplifiedUI) {
-          document.body.classList.add("simplified");
-        } else {
-          document.body.classList.remove("simplified");
-        }
-
-        const scoreWidget = document.getElementById("scoreboard-widget");
-        if (scoreWidget) {
-          if (scoreSystemEnabled) {
-            scoreWidget.classList.remove("hidden");
-          } else {
-            scoreWidget.classList.add("hidden");
-          }
-        }
-      }
-
-      function onSettingMusicChanged() {
-        const checkMusic = document.getElementById("setting-music");
-        if (checkMusic) {
-          musicEnabled = checkMusic.checked;
-          playSoundEffect("settingToggle");
-          saveSettingsToStorage();
-          applySettingsToUI();
-        }
-      }
-
-      function onSettingSFXChanged() {
-        const checkSFX = document.getElementById("setting-sfx");
-        if (checkSFX) {
-          soundEffectsEnabled = checkSFX.checked;
-          playSoundEffect("settingToggle");
-          saveSettingsToStorage();
-        }
-      }
-
-      function onSettingSimplifiedChanged() {
-        const checkSimple = document.getElementById("setting-simplified");
-        if (checkSimple) {
-          simplifiedUI = checkSimple.checked;
-          playSoundEffect("settingToggle");
-          saveSettingsToStorage();
-          applySettingsToUI();
-        }
-      }
-
-      // ============================================================
-      // SECTION: SEED DATA (first-run defaults)
-      // ============================================================
-
-      function seedDefaultTasksIfEmpty() {
-        // All initial default starter tasks have been removed.
-        // The user now starts with a completely fresh, empty list!
-        logDiagnostic(
-          "App starting with clean slate. No default tasks seeded.",
-          "info",
-        );
-      }
-
-      // ============================================================
-      // SECTION: EVENT LISTENERS — Wire up all UI interactions
-      // ============================================================
-
-      function attachEventListeners() {
-        logDiagnostic("Attaching event listeners...", "info");
-
-        // --- Tab buttons ---
-        document.querySelectorAll(".tab-button").forEach((button) => {
-          button.addEventListener("click", () =>
-            switchToTab(button.dataset.tab),
-          );
-        });
-
-        // --- Today tab: Add Task form ---
-        const addTodayBtn = document.getElementById("add-task-today-btn");
-        if (addTodayBtn) {
-          addTodayBtn.addEventListener("click", () => {
-            openTaskForm("today-form-panel", "today-form-days-grid");
-            playSoundEffect("menuClick");
-          });
-        }
-
-        const cancelTodayBtn = document.getElementById("today-form-back-btn");
-        if (cancelTodayBtn) {
-          cancelTodayBtn.addEventListener("click", () => {
-            closeTaskForm("today-form-panel");
-            playSoundEffect("formCancel");
-          });
-        }
-
-        const saveTodayBtn = document.getElementById("today-form-save-btn");
-        if (saveTodayBtn) {
-          saveTodayBtn.addEventListener("click", () => {
-            collectAndSaveTaskFromForm(
-              "today-form-name",
-              "today-form-error",
-              "today-form-important",
-              "today-form-recurring",
-              "today-form-always",
-              "today-form-days-grid",
-              true, // addToToday = yes
-              "today-form-panel",
-            );
-          });
-        }
-
-        // --- Manage tab: event delegation for row actions ---
-        attachManageListDelegation();
-
-        // --- Manage tab: Add Task form ---
-        const addManageBtn = document.getElementById("add-task-manage-btn");
-        if (addManageBtn) {
-          addManageBtn.addEventListener("click", () => {
-            openTaskForm("manage-form-panel", "manage-form-days-grid");
-            playSoundEffect("menuClick");
-          });
-        }
-
-        const cancelManageBtn = document.getElementById("manage-form-back-btn");
-        if (cancelManageBtn) {
-          cancelManageBtn.addEventListener("click", () => {
-            closeTaskForm("manage-form-panel");
-            playSoundEffect("formCancel");
-          });
-        }
-
-        const saveManageBtn = document.getElementById("manage-form-save-btn");
-        if (saveManageBtn) {
-          saveManageBtn.addEventListener("click", () => {
-            collectAndSaveTaskFromForm(
-              "manage-form-name",
-              "manage-form-error",
-              "manage-form-important",
-              "manage-form-recurring",
-              "manage-form-always",
-              "manage-form-days-grid",
-              false, // addToToday = no (manage tab: just add to master list)
-              "manage-form-panel",
-            );
-          });
-        }
-
-        // --- Music player ---
-        const playBtn = document.getElementById("music-play-btn");
-        if (playBtn) playBtn.addEventListener("click", togglePlayPause);
-
-        const nextBtn = document.getElementById("music-next-btn");
-        if (nextBtn) nextBtn.addEventListener("click", goToNextTrack);
-
-        const prevBtn = document.getElementById("music-prev-btn");
-        if (prevBtn) prevBtn.addEventListener("click", goToPreviousTrack);
-
-        // --- Settings toggles ---
-        const musicToggle = document.getElementById("setting-music");
-        if (musicToggle)
-          musicToggle.addEventListener("change", onSettingMusicChanged);
-
-        const sfxToggle = document.getElementById("setting-sfx");
-        if (sfxToggle)
-          sfxToggle.addEventListener("change", onSettingSFXChanged);
-
-        const simpleToggle = document.getElementById("setting-simplified");
-        if (simpleToggle)
-          simpleToggle.addEventListener("change", onSettingSimplifiedChanged);
-
-        const scoreToggle = document.getElementById("setting-score");
-        if (scoreToggle) {
-          scoreToggle.addEventListener("change", () => {
-            scoreSystemEnabled = scoreToggle.checked;
-            playSoundEffect("settingToggle");
-            saveSettingsToStorage();
-            applySettingsToUI();
-          });
-        }
-
-        // --- Settings daily task pool limit ---
-        const limitInput = document.getElementById("setting-random-limit");
-        if (limitInput) {
-          limitInput.addEventListener("change", () => {
-            let val = parseInt(limitInput.value, 10);
-            if (isNaN(val) || val < 1) val = 1;
-            if (val > 50) val = 50; // clamp maximum pool limit parameter to 50
-            maxRandomTasks = val;
-            limitInput.value = val;
-            playSoundEffect("settingToggle");
-            saveSettingsToStorage();
-            logDiagnostic(
-              `Daily task selection pool limit changed to: ${maxRandomTasks}`,
-              "info",
-            );
-          });
-        }
-
-        // --- Reset today ---
-        const resetBtn = document.getElementById("reset-today-btn");
-        if (resetBtn) {
-          resetBtn.addEventListener("click", async () => {
-            playSoundEffect("settingAction");
-            // Replaced standard confirm() with customized non-blocking promise-based modal dialog
-            const userConfirmed = await showConfirmDialog(
-              "Re-roll tasks",
-              "Re-roll today's tasks? Current progress will be cleared.",
-            );
-            if (userConfirmed) {
-              logDiagnostic(
-                "User cleared today's task selection. Re-rolling pools...",
-                "info",
-              );
-              // Reset status on all tasks
-              allTasks.forEach((task) => {
-                task.status = "pending";
-              });
-              saveAllTasksToStorage();
-              buildTodaysTaskSelection();
-              renderTodaysTasks();
-              playSoundEffect("settingToggle");
-            }
-          });
-        }
-      }
-
-      // ============================================================
-      // SECTION: UTILITY
-      // ============================================================
-
-      function escapeHTML(text) {
-        const div = document.createElement("div");
-        div.appendChild(document.createTextNode(text));
-        return div.innerHTML;
-      }
-
-      // ============================================================
-      // SECTION: APP INIT — entry point
-      // ============================================================
-
-      function initializeApp() {
-        logDiagnostic("Initializing DailyDo application engine...", "info");
-
-        loadDataFromStorage();
-        seedDefaultTasksIfEmpty();
-
-        // Validate active streaks
-        checkAndProcessStreak();
-
-        // Build today's tasks if not yet set for today
-        if (todayTaskIds.length === 0) {
-          buildTodaysTaskSelection();
-        }
-
-        // Run renders
-        renderTodaysTasks();
-        renderManageTasks();
-        renderScoreboard();
-        applySettingsToUI();
-        loadCurrentTrack();
-        attachEventListeners();
-
-        logDiagnostic(
-          "DailyDo engine loaded successfully. Diagnostics healthy.",
-          "info",
-        );
-      }
-
-      // Run on DOM ready
-      document.addEventListener("DOMContentLoaded", initializeApp);
-    </script>
-  </body>
+    });
+  }
+}
+
+// ============================================================
+// SECTION: UTILITY
+// ============================================================
+
+function escapeHTML(text) {
+  const div = document.createElement("div");
+  div.appendChild(document.createTextNode(text));
+  return div.innerHTML;
+}
+
+// ============================================================
+// SECTION: APP INIT — entry point
+// ============================================================
+
+function initializeApp() {
+  logDiagnostic("Initializing DailyDo application engine...", "info");
+  
+  loadDataFromStorage();
+  seedDefaultTasksIfEmpty();
+
+  // Validate active streaks
+  checkAndProcessStreak();
+
+  // Build today's tasks if not yet set for today
+  if (todayTaskIds.length === 0) {
+    buildTodaysTaskSelection();
+  }
+
+  // Run renders
+  renderTodaysTasks();
+  renderManageTasks();
+  renderScoreboard();
+  applySettingsToUI();
+  loadCurrentTrack();
+  attachEventListeners();
+  
+  logDiagnostic("DailyDo engine loaded successfully. Diagnostics healthy.", "info");
+}
+
+// Run on DOM ready
+document.addEventListener("DOMContentLoaded", initializeApp);
+</script>
+
+</body>
 </html>
